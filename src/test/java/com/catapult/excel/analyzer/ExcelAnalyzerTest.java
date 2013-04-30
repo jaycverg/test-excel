@@ -19,15 +19,21 @@ public class ExcelAnalyzerTest
         InputStream is = null;
         try
         {
-            is = getClass().getResourceAsStream("format2.xlsx");
+            is = getClass().getResourceAsStream("format3.xlsx");
             Workbook wb = WorkbookFactory.create(is);
+
+//            Sheet sheet = wb.getSheetAt(wb.getSheetIndex("Rates"));
             Sheet sheet = wb.getSheetAt(0);
+
+            System.out.println("-------------------------------------");
+            System.out.println("Sheet Name: " + sheet.getSheetName());
+            System.out.println("-------------------------------------");
 
             ExcelSheetAnalyzer esa = new ExcelSheetAnalyzer(sheet);
             esa.analyze();
             for (ExcelDataHeader header : esa.getHeaders())
             {
-                
+                System.out.println(header);
             }
         }
         catch(Exception e) {

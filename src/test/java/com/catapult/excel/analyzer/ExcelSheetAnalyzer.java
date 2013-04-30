@@ -2,7 +2,6 @@ package com.catapult.excel.analyzer;
 
 import com.catapult.testexcel.CellUtil;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -44,17 +43,17 @@ public class ExcelSheetAnalyzer
         headers.clear();
 
         List<RowNode> rows = new ArrayList();
-        Map<Integer, RowNode> rowsMap = new HashMap();
+        Map<Integer, RowNode> rowMap = new HashMap();
 
-        indexCells(rowsMap, rows);
+        indexCells(rowMap, rows);
         if (rows.isEmpty()) return;
 
-        applyMergedRegions(rowsMap);
+        applyMergedRegions(rowMap);
         prepareAndScoreEachCell(rows);
-        analyzePossibleHeaders(rowsMap, rows);
+        analyzePossibleHeaders(rowMap, rows);
     }
 
-    private void indexCells(Map<Integer, RowNode> rowsMap, List<RowNode> rows)
+    private void indexCells(Map<Integer, RowNode> rowMap, List<RowNode> rows)
     {
         Iterator<Row> rowItr = sheet.rowIterator();
 
@@ -65,21 +64,24 @@ public class ExcelSheetAnalyzer
             rowNode.index = row.getRowNum();
             Iterator<Cell> cellItr = row.cellIterator();
 
-            while (cellItr.hasNext()) {
+            while (cellItr.hasNext())
+            {
                 Cell cell = cellItr.next();
-                if (CellUtil.getCellValue(cell) != null) {
+                if (CellUtil.getCellValue(cell) != null)
+                {
                     rowNode.add(new CellNode(cell));
                 }
             }
 
-            if (!rowNode.getCellValues().isEmpty()) {
+            if (!rowNode.getCellValues().isEmpty())
+            {
                 rows.add(rowNode);
-                rowsMap.put(rowNode.index, rowNode);
+                rowMap.put(rowNode.index, rowNode);
             }
         }
     }
 
-    private void applyMergedRegions(Map<Integer, RowNode> rowsMap)
+    private void applyMergedRegions(Map<Integer, RowNode> rowMap)
     {
         for (int i=0; i < sheet.getNumMergedRegions(); ++i)
         {
@@ -89,25 +91,28 @@ public class ExcelSheetAnalyzer
             int startCol = range.getFirstColumn();
             int endCol = range.getLastColumn();
 
-            RowNode sourceRow = rowsMap.get(startRow);
+            RowNode sourceRow = rowMap.get(startRow);
             // this might be merging rows with no value
-            if (sourceRow == null) {
+            if (sourceRow == null)
+            {
                 continue;
             }
 
             CellNode sourceCell = sourceRow.getAt(startCol);
             // this might be merging cells with no value
-            if (sourceCell == null) {
+            if (sourceCell == null)
+            {
                 continue;
             }
 
             for (int rowIdx=startRow; rowIdx <= endRow; ++rowIdx)
             {
-                RowNode rowNode = rowsMap.get(rowIdx);
+                RowNode rowNode = rowMap.get(rowIdx);
                 for (int colIdx=startCol; colIdx <= endCol; ++colIdx)
                 {
                     CellNode cn = rowNode.getAt(colIdx);
-                    if (cn == null) {
+                    if (cn == null)
+                    {
                         cn = new CellNode(sourceCell.cell);
                         cn.rowIndex = rowIdx;
                         cn.colIndex = colIdx;
@@ -127,13 +132,14 @@ public class ExcelSheetAnalyzer
         RowNode prevRow = null;
         for (RowNode currentRow : rows)
         {
-            // pack row node to sort all cells
+            // pack row currentNode to sort all cells
             // based on indexes and do some initializations
             currentRow.pack();
             
             currentRow.prev = prevRow;
             currentRow.next = null;
-            if (prevRow != null) {
+            if (prevRow != null)
+            {
                 prevRow.next = currentRow;
             }
 
@@ -145,7 +151,8 @@ public class ExcelSheetAnalyzer
                 currentCell.parent = currentRow;
                 currentCell.prev = prevCell;
                 currentCell.next = null;
-                if (prevCell != null) {
+                if (prevCell != null)
+                {
                     prevCell.next = currentCell;
                 }
 
@@ -166,7 +173,8 @@ public class ExcelSheetAnalyzer
         while (topRow != null)
         {
             cellNode.top = topRow.getAt(cellNode.colIndex);
-            if (cellNode.top != null) {
+            if (cellNode.top != null)
+            {
                 cellNode.top.bottom = cellNode;
                 break;
             }
@@ -185,21 +193,25 @@ public class ExcelSheetAnalyzer
     {
         Cell cell = cellNode.cell;
         CellStyle style = cell.getCellStyle();
-        if (style.getFillForegroundColorColor() != null) {
+        if (style.getFillForegroundColorColor() != null)
+        {
             cellNode.headerScore += 1;
         }
 
-        if (cellNode.merged) {
+        if (cellNode.merged)
+        {
             cellNode.headerScore += 1;
         }
 
         Font font = sheet.getWorkbook().getFontAt(style.getFontIndex());
-        if (font.getBoldweight() == Font.BOLDWEIGHT_BOLD) {
+        if (font.getBoldweight() == Font.BOLDWEIGHT_BOLD)
+        {
             cellNode.headerScore += 3;
         }
 
         Matcher m = POSSIBLE_HEADER_TEXT.matcher(cellNode.value.toLowerCase());
-        if (m.find()) {
+        if (m.find())
+        {
             cellNode.headerScore += 5;
         }
     }
@@ -212,18 +224,20 @@ public class ExcelSheetAnalyzer
     private void analyzeIfData(CellNode cellNode)
     {
         // try if numeric
-        try {
+        try
+        {
             Float.parseFloat(cellNode.value);
             cellNode.dataScore += 1;
         }
         catch(NumberFormatException ignored){}
 
-        if (CountryCodeIndex.isCountryCode(cellNode.value)) {
+        if (CountryCodeIndex.isCountryCode(cellNode.value))
+        {
             cellNode.dataScore += 3;
         }
     }
 
-    private void analyzePossibleHeaders(Map<Integer, RowNode> rowsMap, List<RowNode> rows)
+    private void analyzePossibleHeaders(Map<Integer, RowNode> rowMap, List<RowNode> rows)
     {
         List<CellNode> unprocessedList = new ArrayList();
         unprocessedList.add(rows.get(0).first);
@@ -232,7 +246,8 @@ public class ExcelSheetAnalyzer
         {
             CellNode cNode = unprocessedList.remove(0);
             
-            if (!cNode.processed) {
+            if (!cNode.processed)
+            {
                 analyzeCellNode(cNode, unprocessedList);
             }
         }
@@ -240,10 +255,9 @@ public class ExcelSheetAnalyzer
 
     private void analyzeCellNode(CellNode firstNode, List<CellNode> unprocessedList)
     {
-        // - if no adjacent cells, just find the next blocks of data
-        // - for this algorithm, a header should have at least one
-        //   value either going right or down
-        if (!firstNode.isNextAdjacent() && !firstNode.isNextAdjacent()) {
+        // if not a valid currentNode, just find the next blocks of data
+        if (!isValidNode(firstNode))
+        {
             firstNode.processed = true;
             findNextDataBlockHorizontal(firstNode, unprocessedList);
             findNextDataBlockVertical(firstNode, unprocessedList);
@@ -261,22 +275,45 @@ public class ExcelSheetAnalyzer
         CellNodeScore verticalScore = new CellNodeScore();
         bottomNode = computeScore(firstNode, false, verticalScore);
 
-        if (horizontalScore.getCount() > 1 && verticalScore.getCount() > 1) {
-            if (horizontalScore.getHeaderAveScore() > verticalScore.getHeaderAveScore()) {
+        // this is the usual data
+        if (horizontalScore.getCount() > 1 && verticalScore.getCount() > 1)
+        {
+            if (horizontalScore.getHeaderAveScore() > verticalScore.getHeaderAveScore())
+            {
                 createHeadersHorizontal(firstNode, horizontalScore);
             }
-            else {
+            else
+            {
                 createHeadersVertical(firstNode, verticalScore);
             }
         }
         // this is for further testing processing
-        else {
+        else
+        {
             
         }
 
         // find next blocks of data
         findNextDataBlockHorizontal(rightNode, unprocessedList);
         findNextDataBlockVertical(bottomNode, unprocessedList);
+    }
+
+    private boolean isValidNode(CellNode firstNode)
+    {
+        // a header should have at least one value either going right or down
+        if (!firstNode.isNextAdjacent() && !firstNode.isNextAdjacent())
+        {
+            return false;
+        }
+
+        // if the bottom has an adjacent cell to the left,
+        // this might not be a header
+        if (firstNode.bottom != null && firstNode.bottom.isPrevAdjacent())
+        {
+            return false;
+        }
+
+        return true;
     }
 
     private CellNode computeScore(CellNode firstNode, boolean horizontal, CellNodeScore score)
@@ -289,11 +326,13 @@ public class ExcelSheetAnalyzer
             score.add(lastNode);
 
             // applies to horizontal only
-            if (horizontal && !lastNode.isNextAdjacent()) {
+            if (horizontal && !lastNode.isNextAdjacent())
+            {
                 break;
             }
             // applies to vertical only
-            else if (!horizontal && !lastNode.isBottomAdjacent()) {
+            else if (!horizontal && !lastNode.isBottomAdjacent())
+            {
                 break;
             }
 
@@ -305,41 +344,48 @@ public class ExcelSheetAnalyzer
     }
 
     /**
-     * Recursively finds the next data block to right of the passed node
+     * Recursively finds the next data block to right of the passed currentNode
      */
     private void findNextDataBlockHorizontal(CellNode node, List<CellNode> unprocessedList)
     {
-        if (node.next != null) {
-            if (node.isNextAdjacent()) {
+        if (node.next != null)
+        {
+            if (node.isNextAdjacent())
+            {
                 findNextDataBlockHorizontal(node.next, unprocessedList);
             }
-            else {
+            else
+            {
                 // add to unprocessed list
                 // this will be for processing
                 unprocessedList.add(node.next);
             }
         }
-        else if (node.bottom != null) {
+        else if (node.bottom != null)
+        {
             findNextDataBlockHorizontal(node.bottom, unprocessedList);
         }
-        else {
+        else
+        {
             while (node.isPrevAdjacent() && node.prev.bottom == null)
             {
                 node = node.prev;
             }
 
-            if (node != null && node.bottom != null) {
+            if (node != null && node.bottom != null)
+            {
                 findNextDataBlockHorizontal(node.bottom, unprocessedList);
             }
         }
     }
 
     /**
-     * Finds the next CellNode at the bottom of the passed node
+     * Finds the next CellNode at the bottom of the passed currentNode
      */
     private void findNextDataBlockVertical(CellNode node, List<CellNode> unprocessedList)
     {
-        if (node.parent.next != null) {
+        if (node.parent.next != null)
+        {
             unprocessedList.add(node.parent.next.first);
         }
     }
@@ -347,32 +393,75 @@ public class ExcelSheetAnalyzer
     private void createHeadersHorizontal(CellNode firstNode, CellNodeScore initialScore)
     {
         // create the headers
-        Map<Integer, ExcelDataHeader> headersMap = new LinkedHashMap();
-        CellNode node = firstNode;
+        Map<Integer, ExcelDataHeader> headerMap = new LinkedHashMap();
+        CellNode currentNode = firstNode;
         
         do
         {
-            ExcelDataHeader header = new ExcelDataHeader(node.cell);
-            headersMap.put(node.colIndex, header);
+            ExcelDataHeader header = new ExcelDataHeader(currentNode.cell);
+            header.setOrientation(ExcelDataHeader.ORIENTATION_HORIZONTAL);
+            headerMap.put(currentNode.colIndex, header);
         }
-        while(node.isNextAdjacent() && (node = node.next) != null);
+        while(currentNode.isNextAdjacent() && (currentNode = currentNode.next) != null);
 
         // try to find subheaders
-        CellNodeScore subScore = new CellNodeScore();
-        node = firstNode.bottom;
+        if (firstNode.isBottomAdjacent())
+        {
+            CellNodeScore subScore = new CellNodeScore();
+            currentNode = firstNode.bottom;
+
+            do
+            {
+                subScore.reset();
+                computeScore(currentNode, true, subScore);
+                // if cells are not equal to the initial cells,
+                // then its not a subheader
+                if (subScore.getCount() != initialScore.getCount())
+                {
+                    break;
+                }
+
+                headerMap.get(currentNode.colIndex).addSubHeader(currentNode.cell);
+            }
+            while (currentNode.isBottomAdjacent() && (currentNode = currentNode.bottom) != null);
+
+            // reset current node to its parent node
+            currentNode = currentNode.top;
+        }
+
+        // find the first and last rows for the data of each header
+        int dataStartRow = currentNode.rowIndex+1;
+        int dataEndRow = dataStartRow;
+
+        // iterate each lastHeader
         do
         {
-            subScore.reset();
-            computeScore(node, true, subScore);
-            // if cells are not equal to the initial cells,
-            // then its not a subheader
-            if (subScore.getCount() != initialScore.getCount()) {
-                break;
+            // determine the bottom most currentNode
+            CellNode bottomNode = currentNode.bottom;
+
+            while (bottomNode != null && bottomNode.isBottomAdjacent())
+            {
+                bottomNode = bottomNode.bottom;
             }
 
-            headersMap.get(node.colIndex).addSubHeader(node.cell);
+            if (bottomNode != null) {
+                dataEndRow = Math.max(dataEndRow, bottomNode.rowIndex);
+            }
         }
-        while (node.isBottomAdjacent() && (node = node.bottom) != null);
+        while(currentNode.isNextAdjacent() && (currentNode = currentNode.next) != null);
+
+        for (ExcelDataHeader header : headerMap.values())
+        {
+            header.setDataStartRow(dataStartRow);
+            header.setDataEndRow(dataEndRow);
+            header.setDataStartColumn(header.getStartColumn());
+            header.setDataEndColumn(header.getStartColumn());
+        }
+
+        if (!headerMap.isEmpty())
+        {
+            headers.addAll(headerMap.values());
+        }
     }
 
     private void createHeadersVertical(CellNode firstNode, CellNodeScore initialScore)
@@ -381,117 +470,6 @@ public class ExcelSheetAnalyzer
     }
 
     //<editor-fold defaultstate="collapsed" desc="=== helper classes ===">
-    private static class RowNode
-    {
-        public int index;
-        
-        public RowNode prev;
-        public RowNode next;
-
-        public CellNode first;
-        public CellNode last;
-        
-        private Map<Integer,CellNode> colsMap = new HashMap();
-        private List<CellNode> cols = new ArrayList();
-
-        public void pack()
-        {
-            Collections.sort(cols);
-            
-            if (!cols.isEmpty())
-            {
-                first = cols.get(0);
-                last = cols.get(cols.size()-1);
-            }
-        }
-
-        public void add(CellNode value)
-        {
-            cols.add(value);
-            colsMap.put(value.colIndex, value);
-        }
-
-        public List<CellNode> getCellValues()
-        {
-            return cols;
-        }
-
-        public CellNode getAt(int index)
-        {
-            return colsMap.get(index);
-        }
-    }
-
-    private static class CellNode implements Comparable<CellNode>
-    {
-        public int rowIndex;
-        public int colIndex;
-
-        public int headerScore;
-        public int dataScore;
-        
-        public String value;
-        public Cell cell;
-        public boolean merged;
-        public boolean header;
-        public boolean processed;
-
-        public CellNode top;
-        public CellNode bottom;
-        public CellNode prev;
-        public CellNode next;
-        
-        public RowNode parent;
-
-        CellNode(Cell cell)
-        {
-            this.rowIndex = cell.getRowIndex();
-            this.colIndex = cell.getColumnIndex();
-            this.value = CellUtil.getCellValueAsString(cell);
-            this.cell = cell;
-        }
-
-        public boolean isPrevAdjacent()
-        {
-            return prev != null && prev.colIndex == this.colIndex-1;
-        }
-
-        public boolean isNextAdjacent()
-        {
-            return next != null && next.colIndex == this.colIndex+1;
-        }
-
-        public boolean isTopAdjacent()
-        {
-            return top != null && top.rowIndex == this.rowIndex-1;
-        }
-
-        public boolean isBottomAdjacent()
-        {
-            return bottom != null && bottom.rowIndex == this.rowIndex+1;
-        }
-
-        @Override
-        public int compareTo(CellNode o)
-        {
-            if (o == null) {
-                return -1;
-            }
-
-            return this.colIndex - o.colIndex;
-        }
-
-        @Override
-        public String toString()
-        {
-            return new StringBuilder()
-                    .append("row: ").append(rowIndex)
-                    .append(",col: ").append(colIndex)
-                    .toString();
-        }
-
-    }
-
     private static class CellNodeScore
     {
         private int count;

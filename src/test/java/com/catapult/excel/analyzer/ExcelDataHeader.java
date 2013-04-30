@@ -2,6 +2,7 @@ package com.catapult.excel.analyzer;
 
 import java.util.ArrayList;
 import java.util.List;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.poi.ss.usermodel.Cell;
 
 /**
@@ -10,8 +11,8 @@ import org.apache.poi.ss.usermodel.Cell;
  */
 public class ExcelDataHeader 
 {
-    private static final short ORIENTATION_VERTICAL = 1;
-    private static final short ORIENTATION_HORIZONTAL = 2;
+    public static final short ORIENTATION_VERTICAL = 1;
+    public static final short ORIENTATION_HORIZONTAL = 2;
 
     private String sheetName;
     private int sheetIndex;
@@ -24,7 +25,6 @@ public class ExcelDataHeader
     private int dataEndRow;
     private int dataEndColumn;
     private short orientation;
-    private String title;
     private List<String> titleList = new ArrayList();
 
     public ExcelDataHeader(Cell cell)
@@ -33,6 +33,8 @@ public class ExcelDataHeader
         this.startColumn = cell.getColumnIndex();
         this.endRow = this.startRow;
         this.endColumn = this.startColumn;
+
+        addTitle(cell.toString().trim());
     }
 
     public void addSubHeader(Cell cell)
@@ -40,13 +42,39 @@ public class ExcelDataHeader
         // if orientation is horizontal,
         // adding a subheader is going down
         if (ORIENTATION_HORIZONTAL == orientation) {
-            this.endRow = cell.getRowIndex();
+            endRow = cell.getRowIndex();
         }
         // adding a subheader is going to the right
         else {
-            this.endColumn = cell.getColumnIndex();
+            endColumn = cell.getColumnIndex();
         }
+
+        addTitle(cell.toString().trim());
     }
+
+    @Override
+    public String toString()
+    {
+        return new StringBuilder()
+                .append("start: [").append(startRow)
+                .append(",").append(startColumn).append("]")
+                .append(",end: [").append(endRow)
+                .append(",").append(endColumn).append("]")
+                .append(",orientation: ")
+                .append(",data start: [").append(dataStartRow)
+                .append(",").append(dataStartColumn).append("]")
+                .append(",data end : ").append(dataEndRow)
+                .append(",").append(dataEndColumn).append("]")
+                .append(orientation==ORIENTATION_HORIZONTAL ? "H" : "V")
+                .append(",title: ").append(getTitle())
+                .toString();
+    }
+
+    private void addTitle(String title)
+    {
+        titleList.add(title.replace("\n", " ").replaceAll("\\s{2,}", " "));
+    }
+    
 
     /**
      * @return the sheetName
@@ -229,15 +257,7 @@ public class ExcelDataHeader
      */
     public String getTitle()
     {
-        return title;
-    }
-
-    /**
-     * @param title the title to set
-     */
-    public void setTitle(String title)
-    {
-        this.title = title;
+        return StringUtils.join(titleList, " ");
     }
 
     /**
