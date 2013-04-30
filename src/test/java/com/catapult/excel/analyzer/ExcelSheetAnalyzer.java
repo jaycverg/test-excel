@@ -50,7 +50,11 @@ public class ExcelSheetAnalyzer
 
         applyMergedRegions(rowMap);
         prepareAndScoreEachCell(rows);
-        analyzePossibleHeaders(rowMap, rows);
+
+        CellNode firstNode = rows.get(0).first;
+        rows.clear();   // clear resources
+        rowMap.clear(); // clear resources
+        analyzePossibleHeaders(firstNode);
     }
 
     private void indexCells(Map<Integer, RowNode> rowMap, List<RowNode> rows)
@@ -237,10 +241,10 @@ public class ExcelSheetAnalyzer
         }
     }
 
-    private void analyzePossibleHeaders(Map<Integer, RowNode> rowMap, List<RowNode> rows)
+    private void analyzePossibleHeaders(CellNode firstNode)
     {
         List<CellNode> unprocessedList = new ArrayList();
-        unprocessedList.add(rows.get(0).first);
+        unprocessedList.add(firstNode);
 
         while(!unprocessedList.isEmpty())
         {
@@ -437,16 +441,14 @@ public class ExcelSheetAnalyzer
         do
         {
             // determine the bottom most currentNode
-            CellNode bottomNode = currentNode.bottom;
+            CellNode bottomNode = currentNode;
 
-            while (bottomNode != null && bottomNode.isBottomAdjacent())
+            while (bottomNode.isBottomAdjacent())
             {
                 bottomNode = bottomNode.bottom;
             }
 
-            if (bottomNode != null) {
-                dataEndRow = Math.max(dataEndRow, bottomNode.rowIndex);
-            }
+            dataEndRow = Math.max(dataEndRow, bottomNode.rowIndex);
         }
         while(currentNode.isNextAdjacent() && (currentNode = currentNode.next) != null);
 
