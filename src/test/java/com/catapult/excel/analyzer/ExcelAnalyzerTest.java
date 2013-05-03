@@ -19,10 +19,12 @@ public class ExcelAnalyzerTest
         InputStream is = null;
         try
         {
-            is = getClass().getResourceAsStream("format3.xlsx");
-            Workbook wb = WorkbookFactory.create(is);
-
+//            is = getClass().getResourceAsStream("format4.xlsx");
+//            Workbook wb = WorkbookFactory.create(is);
 //            Sheet sheet = wb.getSheetAt(wb.getSheetIndex("Rates"));
+
+            is = getClass().getResourceAsStream("format2.xlsx");
+            Workbook wb = WorkbookFactory.create(is);
             Sheet sheet = wb.getSheetAt(0);
 
             System.out.println("-------------------------------------");

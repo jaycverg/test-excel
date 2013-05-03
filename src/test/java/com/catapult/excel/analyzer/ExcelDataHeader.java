@@ -37,19 +37,22 @@ public class ExcelDataHeader
         addTitle(cell.toString().trim());
     }
 
-    public void addSubHeader(Cell cell)
+    /**
+     * Package level method that is only used during processing
+     */
+    void addSubHeader(CellNode cellNode)
     {
         // if orientation is horizontal,
         // adding a subheader is going down
         if (ORIENTATION_HORIZONTAL == orientation) {
-            endRow = cell.getRowIndex();
+            endRow = cellNode.rowIndex;
         }
         // adding a subheader is going to the right
         else {
-            endColumn = cell.getColumnIndex();
+            endColumn = cellNode.colIndex;
         }
 
-        addTitle(cell.toString().trim());
+        addTitle(cellNode.cell.toString().trim());
     }
 
     @Override
@@ -257,7 +260,7 @@ public class ExcelDataHeader
      */
     public String getTitle()
     {
-        return StringUtils.join(titleList, " ");
+        return StringUtils.join(titleList, " / ");
     }
 
     /**
