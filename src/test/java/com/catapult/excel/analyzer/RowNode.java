@@ -17,8 +17,8 @@ class RowNode
     public RowNode prev;
     public RowNode next;
 
-    public CellNode first;
-    public CellNode last;
+    public CellNode firstChild;
+    public CellNode lastChild;
 
     private Map<Integer,CellNode> colsMap = new HashMap();
     private List<CellNode> cols = new ArrayList();
@@ -29,8 +29,8 @@ class RowNode
 
         if (!cols.isEmpty())
         {
-            first = cols.get(0);
-            last = cols.get(cols.size()-1);
+            firstChild = cols.get(0);
+            lastChild = cols.get(cols.size()-1);
         }
     }
 

@@ -3,13 +3,12 @@ package com.catapult.excel.analyzer;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.poi.ss.usermodel.Cell;
 
 /**
  *
  * @author jvergara <jvergara@gocatapult.com>
  */
-public class ExcelDataHeader 
+public class ExcelDataHeader implements Comparable<ExcelDataHeader>
 {
     public static final short ORIENTATION_VERTICAL = 1;
     public static final short ORIENTATION_HORIZONTAL = 2;
@@ -27,14 +26,14 @@ public class ExcelDataHeader
     private short orientation;
     private List<String> titleList = new ArrayList();
 
-    public ExcelDataHeader(Cell cell)
+    public ExcelDataHeader(CellNode cellNode)
     {
-        this.startRow = cell.getRowIndex();
-        this.startColumn = cell.getColumnIndex();
+        this.startRow = cellNode.rowIndex;
+        this.startColumn = cellNode.colIndex;
         this.endRow = this.startRow;
         this.endColumn = this.startColumn;
 
-        addTitle(cell.toString().trim());
+        addTitle(cellNode.cell.toString().trim());
     }
 
     /**
@@ -64,13 +63,27 @@ public class ExcelDataHeader
                 .append(",end: [").append(endRow)
                 .append(",").append(endColumn).append("]")
                 .append(",orientation: ")
+                .append(orientation==ORIENTATION_HORIZONTAL ? "H" : "V")
                 .append(",data start: [").append(dataStartRow)
                 .append(",").append(dataStartColumn).append("]")
                 .append(",data end : ").append(dataEndRow)
                 .append(",").append(dataEndColumn).append("]")
-                .append(orientation==ORIENTATION_HORIZONTAL ? "H" : "V")
                 .append(",title: ").append(getTitle())
                 .toString();
+    }
+
+    @Override
+    public int compareTo(ExcelDataHeader o)
+    {
+        if (o == null) {
+            return -1;
+        }
+
+        if (this.startRow != o.startRow) {
+            return this.startRow - o.startRow;
+        }
+
+        return this.startColumn - o.startColumn;
     }
 
     private void addTitle(String title)

@@ -1,6 +1,8 @@
 package com.catapult.testexcel;
 
 import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.Font;
 
 /**
  *
@@ -44,5 +46,18 @@ public class CellUtil
                 cell.setCellErrorValue((Byte) value);
                 break;
         }
+    }
+
+    public static boolean hasBackground(Cell cell)
+    {
+        CellStyle style = cell.getCellStyle();
+        return (style.getFillForegroundColorColor() != null);
+    }
+
+    public static boolean isTextBold(Cell cell)
+    {
+        CellStyle style = cell.getCellStyle();
+        Font font = cell.getSheet().getWorkbook().getFontAt(style.getFontIndex());
+        return (font.getBoldweight() == Font.BOLDWEIGHT_BOLD);
     }
 }

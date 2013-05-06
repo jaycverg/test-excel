@@ -2,6 +2,7 @@ package com.catapult.excel.analyzer;
 
 import com.catapult.testexcel.CellUtil;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -10,8 +11,6 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.poi.ss.usermodel.Cell;
-import org.apache.poi.ss.usermodel.CellStyle;
-import org.apache.poi.ss.usermodel.Font;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.util.CellRangeAddress;
@@ -24,6 +23,16 @@ public class ExcelSheetAnalyzer
 {
     private static final Pattern POSSIBLE_HEADER_TEXT = Pattern.compile("origin|destination|port|carrier|shipper|service|contract");
     private static final int SCORE_COMPARISON_OFFSET = 2; // +/- 1 offset
+
+    private static final int HEADER_SCORE_BG = 1;
+    private static final int HEADER_SCORE_MERGED = 1;
+    private static final int HEADER_SCORE_BOLD_TEXT = 3;
+    private static final int HEADER_SCORE_COMMON_VALUE = 5;
+    private static final int HEADER_SCORE_TOTAL = HEADER_SCORE_BG + HEADER_SCORE_MERGED + HEADER_SCORE_BOLD_TEXT + HEADER_SCORE_COMMON_VALUE;
+
+    private static final int DATA_SCORE_NUMERIC = 1;
+    private static final int DATA_SCORE_COMMON_VALUE = 3;
+    private static final int DATA_SCORE_TOTAL = DATA_SCORE_NUMERIC + DATA_SCORE_COMMON_VALUE;
 
     private Sheet sheet;
     private List<ExcelDataHeader> headers = new ArrayList();
@@ -51,10 +60,12 @@ public class ExcelSheetAnalyzer
         applyMergedRegions(rowMap);
         prepareAndScoreEachCell(rows);
 
-        CellNode firstNode = rows.get(0).first;
+        CellNode firstNode = rows.get(0).firstChild;
         rows.clear();   // clear resources
         rowMap.clear(); // clear resources
         analyzePossibleHeaders(firstNode);
+
+        Collections.sort(headers);
     }
 
     private void indexCells(Map<Integer, RowNode> rowMap, List<RowNode> rows)
@@ -188,42 +199,40 @@ public class ExcelSheetAnalyzer
 
     /**
      * A cell could be a header if:
-     *  - (+1) it has a background
-     *  - (+1) it has merged cells
-     *  - (+3) it has a bold text
-     *  - (+5) its value contains "origin", "destination", "port", etc.
+     *  - it has a background
+     *  - it has merged cells
+     *  - it has a bold text
+     *  - its value contains "origin", "destination", "port", etc.
      */
     private void analyzeIfHeader(CellNode cellNode)
     {
-        Cell cell = cellNode.cell;
-        CellStyle style = cell.getCellStyle();
-        if (style.getFillForegroundColorColor() != null)
+        if (CellUtil.hasBackground(cellNode.cell))
         {
-            cellNode.headerScore += 1;
+            cellNode.headerScore += HEADER_SCORE_BG;
         }
 
         if (cellNode.merged)
         {
-            cellNode.headerScore += 1;
+            cellNode.headerScore += HEADER_SCORE_MERGED;
         }
 
-        Font font = sheet.getWorkbook().getFontAt(style.getFontIndex());
-        if (font.getBoldweight() == Font.BOLDWEIGHT_BOLD)
+        if (CellUtil.isTextBold(cellNode.cell))
         {
-            cellNode.headerScore += 3;
+            cellNode.headerScore += HEADER_SCORE_BOLD_TEXT;
         }
 
+        // match for common header values
         Matcher m = POSSIBLE_HEADER_TEXT.matcher(cellNode.value.toLowerCase());
         if (m.find())
         {
-            cellNode.headerScore += 5;
+            cellNode.headerScore += HEADER_SCORE_COMMON_VALUE;
         }
     }
 
     /**
      * A cell could be a value if:
-     *  - (+1) its value is numeric
-     *  - (+3) its value is an ISO country code
+     *  - its value is numeric
+     *  - its value is an ISO country code
      */
     private void analyzeIfData(CellNode cellNode)
     {
@@ -231,13 +240,14 @@ public class ExcelSheetAnalyzer
         try
         {
             Float.parseFloat(cellNode.value);
-            cellNode.dataScore += 1;
+            cellNode.dataScore += DATA_SCORE_NUMERIC;
         }
         catch(NumberFormatException ignored){}
 
+        // match for common data values
         if (CountryCodeIndex.isCountryCode(cellNode.value))
         {
-            cellNode.dataScore += 3;
+            cellNode.dataScore += DATA_SCORE_COMMON_VALUE;
         }
     }
 
@@ -259,47 +269,52 @@ public class ExcelSheetAnalyzer
 
     private void analyzeCellNode(CellNode firstNode, List<CellNode> unprocessedList)
     {
-        // if not a valid currentNode, just find the next blocks of data
-        if (!isValidNode(firstNode))
+        firstNode.processed = true;
+
+        CellNode rightNode = firstNode;
+        CellNode bottomNode = firstNode;
+
+        processNode:
         {
-            firstNode.processed = true;
-            findNextDataBlockHorizontal(firstNode, unprocessedList);
-            findNextDataBlockVertical(firstNode, unprocessedList);
-            return;
+            if (!isValidNode(firstNode))
+            {
+                break processNode;
+            }
+
+            // check style consistency
+            boolean hStyleConsistent = checkHorizontalStyleConsistency(firstNode);
+            boolean vStyleConsistent = checkVerticalStyleConsistency(firstNode);
+
+            if (!hStyleConsistent && !vStyleConsistent)
+            {
+                break processNode;
+            }
+
+            // find horizontally the possible headers
+            CellNodeScore horizontalScore = new CellNodeScore();
+            rightNode = computeScoreHorizontal(firstNode, horizontalScore);
+
+            // this might be a header comment
+            if (horizontalScore.count == 1 && !vStyleConsistent) {
+                break processNode;
+            }
+
+            // find vertically the possible headers
+            CellNodeScore verticalScore = new CellNodeScore();
+            bottomNode = computeScoreVertical(firstNode, verticalScore);
+
+            if (horizontalScore.getHeaderScorePercentage() > verticalScore.getHeaderScorePercentage()) {
+                createHeadersHorizontal(firstNode, verticalScore);
+                markHeaderGroupHorizontalAsProcessed(firstNode);
+            }
+            // vertical orientation
+            else {
+                createHeadersVertical(firstNode, verticalScore);
+                markHeaderGroupVerticalAsProcessed(firstNode);
+            }
         }
 
-        CellNode leftNode = firstNode;
-        CellNode rightNode;
-        CellNode topNode = firstNode;
-        CellNode bottomNode;
-
-        // find horizontally the possible headers
-        CellNodeScore horizontalScore = new CellNodeScore();
-        rightNode = computeScoreHorizontal(leftNode, horizontalScore);
-
-        // find vertically the possible headers
-        CellNodeScore verticalScore = new CellNodeScore();
-        bottomNode = computeScoreVertical(topNode, verticalScore);
-
-//        // this is the usual data
-//        if (horizontalScore.getCount() > 1 && verticalScore.getCount() > 1)
-//        {
-//            if (horizontalScore.getHeaderAveScore() > verticalScore.getHeaderAveScore())
-//            {
-//                createHeadersHorizontal(leftNode, horizontalScore);
-//            }
-//            else
-//            {
-//                createHeadersVertical(topNode, verticalScore);
-//            }
-//        }
-//        // this is for further testing processing
-//        else
-//        {
-//
-//        }
-
-        // find next blocks of data
+        // find next blocks of data for processing
         findNextDataBlockHorizontal(rightNode, unprocessedList);
         findNextDataBlockVertical(bottomNode, unprocessedList);
     }
@@ -328,7 +343,6 @@ public class ExcelSheetAnalyzer
 
         do
         {
-            lastNode.processed = true;
             score.add(lastNode);
         }
         while (lastNode.isNextAdjacent() && (lastNode = lastNode.next) != null);
@@ -342,7 +356,6 @@ public class ExcelSheetAnalyzer
 
         do
         {
-            lastNode.processed = true;
             score.add(lastNode);
         }
         while (lastNode.isBottomAdjacent() && (lastNode = lastNode.bottom) != null);
@@ -393,7 +406,7 @@ public class ExcelSheetAnalyzer
     {
         if (node.parent.next != null)
         {
-            unprocessedList.add(node.parent.next.first);
+            unprocessedList.add(node.parent.next.firstChild);
         }
     }
 
@@ -402,10 +415,11 @@ public class ExcelSheetAnalyzer
         // create the headers
         Map<Integer, ExcelDataHeader> headerMap = new LinkedHashMap();
         CellNode currentNode = firstNode;
-        
+
+        // iterate rightward
         do
         {
-            ExcelDataHeader header = new ExcelDataHeader(currentNode.cell);
+            ExcelDataHeader header = new ExcelDataHeader(currentNode);
             header.setOrientation(ExcelDataHeader.ORIENTATION_HORIZONTAL);
             headerMap.put(currentNode.colIndex, header);
         }
@@ -424,7 +438,7 @@ public class ExcelSheetAnalyzer
                 computeScoreHorizontal(currentNode, subScore);
                 // if cells are not equal to the initial cells,
                 // then its not a subheader
-                if (subScore.getCount() != initialScore.getCount())
+                if (subScore.count != initialScore.count)
                 {
                     break;
                 }
@@ -449,7 +463,7 @@ public class ExcelSheetAnalyzer
             currentNode = currentNode.top;
         }
 
-        // find the first and last rows for the data of each header
+        // find the firstChild and lastChild rows for the data of each header
         int dataStartRow = currentNode.rowIndex+1;
         int dataEndRow = dataStartRow;
 
@@ -479,12 +493,95 @@ public class ExcelSheetAnalyzer
         if (!headerMap.isEmpty())
         {
             headers.addAll(headerMap.values());
+            headerMap.clear();
         }
     }
 
     private void createHeadersVertical(CellNode firstNode, CellNodeScore initialScore)
     {
-        
+        // create the headers
+        Map<Integer, ExcelDataHeader> headerMap = new LinkedHashMap();
+        CellNode currentNode = firstNode;
+
+        // iterate downward
+        do
+        {
+            ExcelDataHeader header = new ExcelDataHeader(currentNode);
+            header.setOrientation(ExcelDataHeader.ORIENTATION_VERTICAL);
+            headerMap.put(currentNode.rowIndex, header);
+        }
+        while(currentNode.isBottomAdjacent() && (currentNode = currentNode.bottom) != null);
+
+        // try to find subheaders
+        if (firstNode.isNextAdjacent())
+        {
+            CellNodeScore subScore = new CellNodeScore();
+            currentNode = firstNode.next;
+            double initialHeaderAve = initialScore.getHeaderAveScore();
+
+            do
+            {
+                subScore.reset();
+                computeScoreVertical(currentNode, subScore);
+                // if cells are not equal to the initial cells,
+                // then its not a subheader
+                if (subScore.count != initialScore.count)
+                {
+                    break;
+                }
+
+                // if header average score does not match
+                if (!scoreMatches(initialHeaderAve, subScore.getHeaderAveScore()))
+                {
+                    break;
+                }
+
+                // add subheaders
+                CellNode bottomNode = currentNode;
+                do
+                {
+                    headerMap.get(bottomNode.rowIndex).addSubHeader(bottomNode);
+                }
+                while(bottomNode.isNextAdjacent() && (bottomNode = bottomNode.bottom) != null);
+            }
+            while (currentNode.isNextAdjacent() && (currentNode = currentNode.next) != null);
+
+            // reset current node to its parent node
+            currentNode = currentNode.prev;
+        }
+
+        // find the firstChild and lastChild rows for the data of each header
+        int dataStartCol = currentNode.colIndex+1;
+        int dataEndCol = dataStartCol;
+
+        // iterate each lastHeader
+        do
+        {
+            // determine the right most currentNode
+            CellNode rightNode = currentNode;
+
+            while (rightNode.isNextAdjacent())
+            {
+                rightNode = rightNode.next;
+            }
+
+            dataEndCol = Math.max(dataEndCol, rightNode.colIndex);
+        }
+        while(currentNode.isBottomAdjacent() && (currentNode = currentNode.bottom) != null);
+
+        for (ExcelDataHeader header : headerMap.values())
+        {
+            header.setDataStartColumn(dataStartCol);
+            header.setDataEndColumn(dataEndCol);
+            header.setDataStartRow(header.getStartRow());
+            header.setDataEndRow(header.getEndRow());
+        }
+
+        if (!headerMap.isEmpty())
+        {
+            headers.addAll(headerMap.values());
+            headerMap.clear();
+        }
     }
 
     private boolean scoreMatches(double source, double target)
@@ -493,12 +590,78 @@ public class ExcelSheetAnalyzer
         return (target >= source - offset && target <= source + offset);
     }
 
+    private boolean checkHorizontalStyleConsistency(CellNode firstNode)
+    {
+        boolean isTextBold = CellUtil.isTextBold(firstNode.cell);
+        boolean hasBackground = CellUtil.hasBackground(firstNode.cell);
+
+        while (firstNode.isNextAdjacent() && (firstNode = firstNode.next) != null)
+        {
+            if (isTextBold != CellUtil.isTextBold(firstNode.cell)) {
+                return false;
+            }
+            if (hasBackground != CellUtil.hasBackground(firstNode.cell)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private boolean checkVerticalStyleConsistency(CellNode firstNode)
+    {
+        boolean isTextBold = CellUtil.isTextBold(firstNode.cell);
+        boolean hasBackground = CellUtil.hasBackground(firstNode.cell);
+
+        while (firstNode.isBottomAdjacent() && (firstNode = firstNode.bottom) != null)
+        {
+            if (isTextBold != CellUtil.isTextBold(firstNode.cell)) {
+                return false;
+            }
+            if (hasBackground != CellUtil.hasBackground(firstNode.cell)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private void markHeaderGroupHorizontalAsProcessed(CellNode firstNode)
+    {
+        do {
+            firstNode.processed = true;
+            
+            CellNode bottom = firstNode;
+            while (bottom.isBottomAdjacent())
+            {
+                bottom = bottom.bottom;
+                bottom.processed = true;
+            }
+        }
+        while (firstNode.isNextAdjacent() && (firstNode = firstNode.next) != null);
+    }
+
+    private void markHeaderGroupVerticalAsProcessed(CellNode firstNode)
+    {
+        do {
+            firstNode.processed = true;
+
+            CellNode right = firstNode;
+            while (right.isNextAdjacent())
+            {
+                right = right.next;
+                right.processed = true;
+            }
+        }
+        while (firstNode.isBottomAdjacent() && (firstNode = firstNode.bottom) != null);
+    }
+
     //<editor-fold defaultstate="collapsed" desc="=== helper classes ===">
     private static class CellNodeScore
     {
-        private int count;
-        private int headerScore;
-        private int dataScore;
+        int count;
+        int headerScore;
+        int dataScore;
 
         public void reset()
         {
@@ -519,14 +682,19 @@ public class ExcelSheetAnalyzer
             return headerScore / count;
         }
 
+        public double getHeaderScorePercentage()
+        {
+            return ((headerScore / (double)count) / (double)HEADER_SCORE_TOTAL) * 100;
+        }
+
         public double getDataAveScore()
         {
             return dataScore / count;
         }
 
-        public int getCount()
+        public double getDataScorePercentage()
         {
-            return count;
+            return ((dataScore / (double)count) / (double)DATA_SCORE_TOTAL) * 100;
         }
 
     }
