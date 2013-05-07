@@ -1,4 +1,4 @@
-package com.catapult.excel.analyzer;
+package com.catapult.excel.analyzer.test;
 
 import org.junit.Test;
 

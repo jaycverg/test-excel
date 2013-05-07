@@ -1,5 +1,7 @@
-package com.catapult.excel.analyzer;
+package com.catapult.excel.analyzer.test;
 
+import com.catapult.excel.analyzer.ExcelDataHeader;
+import com.catapult.excel.analyzer.ExcelSheetAnalyzer;
 import java.io.InputStream;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
