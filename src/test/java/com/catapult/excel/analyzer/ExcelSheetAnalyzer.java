@@ -8,8 +8,6 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
@@ -21,21 +19,10 @@ import org.apache.poi.ss.util.CellRangeAddress;
  */
 public class ExcelSheetAnalyzer
 {
-    private static final Pattern POSSIBLE_HEADER_TEXT = Pattern.compile("origin|destination|port|carrier|shipper|service|contract");
-    private static final int SCORE_COMPARISON_OFFSET = 2; // +/- 1 offset
-
-    private static final int HEADER_SCORE_BG = 1;
-    private static final int HEADER_SCORE_MERGED = 1;
-    private static final int HEADER_SCORE_BOLD_TEXT = 3;
-    private static final int HEADER_SCORE_COMMON_VALUE = 5;
-    private static final int HEADER_SCORE_TOTAL = HEADER_SCORE_BG + HEADER_SCORE_MERGED + HEADER_SCORE_BOLD_TEXT + HEADER_SCORE_COMMON_VALUE;
-
-    private static final int DATA_SCORE_NUMERIC = 1;
-    private static final int DATA_SCORE_COMMON_VALUE = 3;
-    private static final int DATA_SCORE_TOTAL = DATA_SCORE_NUMERIC + DATA_SCORE_COMMON_VALUE;
-
     private Sheet sheet;
     private List<ExcelDataHeader> headers = new ArrayList();
+
+    private CellAnalyzer cellAnalyzer;
 
     public ExcelSheetAnalyzer(Sheet sheet)
     {
@@ -173,8 +160,7 @@ public class ExcelSheetAnalyzer
 
                 prevCell = currentCell;
                 findTopCellNode(currentCell);
-                analyzeIfData(currentCell);
-                analyzeIfHeader(currentCell);
+                getCellAnalyzer().analyzeCell(currentCell);
             }
         }
     }
@@ -194,60 +180,6 @@ public class ExcelSheetAnalyzer
                 break;
             }
             topRow = topRow.prev;
-        }
-    }
-
-    /**
-     * A cell could be a header if:
-     *  - it has a background
-     *  - it has merged cells
-     *  - it has a bold text
-     *  - its value contains "origin", "destination", "port", etc.
-     */
-    private void analyzeIfHeader(CellNode cellNode)
-    {
-        if (CellUtil.hasBackground(cellNode.cell))
-        {
-            cellNode.headerScore += HEADER_SCORE_BG;
-        }
-
-        if (cellNode.merged)
-        {
-            cellNode.headerScore += HEADER_SCORE_MERGED;
-        }
-
-        if (CellUtil.isTextBold(cellNode.cell))
-        {
-            cellNode.headerScore += HEADER_SCORE_BOLD_TEXT;
-        }
-
-        // match for common header values
-        Matcher m = POSSIBLE_HEADER_TEXT.matcher(cellNode.value.toLowerCase());
-        if (m.find())
-        {
-            cellNode.headerScore += HEADER_SCORE_COMMON_VALUE;
-        }
-    }
-
-    /**
-     * A cell could be a value if:
-     *  - its value is numeric
-     *  - its value is an ISO country code
-     */
-    private void analyzeIfData(CellNode cellNode)
-    {
-        // try if numeric
-        try
-        {
-            Float.parseFloat(cellNode.value);
-            cellNode.dataScore += DATA_SCORE_NUMERIC;
-        }
-        catch(NumberFormatException ignored){}
-
-        // match for common data values
-        if (CountryCodeIndex.isCountryCode(cellNode.value))
-        {
-            cellNode.dataScore += DATA_SCORE_COMMON_VALUE;
         }
     }
 
@@ -586,7 +518,7 @@ public class ExcelSheetAnalyzer
 
     private boolean scoreMatches(double source, double target)
     {
-        int offset = SCORE_COMPARISON_OFFSET;
+        int offset = getCellAnalyzer().getScoreComparisonOffset();
         return (target >= source - offset && target <= source + offset);
     }
 
@@ -628,7 +560,8 @@ public class ExcelSheetAnalyzer
 
     private void markHeaderGroupHorizontalAsProcessed(CellNode firstNode)
     {
-        do {
+        do
+        {
             firstNode.processed = true;
             
             CellNode bottom = firstNode;
@@ -643,7 +576,8 @@ public class ExcelSheetAnalyzer
 
     private void markHeaderGroupVerticalAsProcessed(CellNode firstNode)
     {
-        do {
+        do
+        {
             firstNode.processed = true;
 
             CellNode right = firstNode;
@@ -656,8 +590,27 @@ public class ExcelSheetAnalyzer
         while (firstNode.isBottomAdjacent() && (firstNode = firstNode.bottom) != null);
     }
 
+    /**
+     * @return the cellAnalyzer
+     */
+    public CellAnalyzer getCellAnalyzer()
+    {
+        if (cellAnalyzer == null) {
+            cellAnalyzer = new DefaultCellAnalyzer();
+        }
+        return cellAnalyzer;
+    }
+
+    /**
+     * @param cellAnalyzer the cellAnalyzer to set
+     */
+    public void setCellAnalyzer(CellAnalyzer cellAnalyzer)
+    {
+        this.cellAnalyzer = cellAnalyzer;
+    }
+
     //<editor-fold defaultstate="collapsed" desc="=== helper classes ===">
-    private static class CellNodeScore
+    private class CellNodeScore
     {
         int count;
         int headerScore;
@@ -684,7 +637,8 @@ public class ExcelSheetAnalyzer
 
         public double getHeaderScorePercentage()
         {
-            return ((headerScore / (double)count) / (double)HEADER_SCORE_TOTAL) * 100;
+            int maxScore = getCellAnalyzer().getHeaderMaxScore();
+            return ((headerScore / (double)count) / (double)maxScore) * 100;
         }
 
         public double getDataAveScore()
@@ -694,7 +648,8 @@ public class ExcelSheetAnalyzer
 
         public double getDataScorePercentage()
         {
-            return ((dataScore / (double)count) / (double)DATA_SCORE_TOTAL) * 100;
+            int maxScore = getCellAnalyzer().getDataMaxScore();
+            return ((dataScore / (double)count) / (double)maxScore) * 100;
         }
 
     }

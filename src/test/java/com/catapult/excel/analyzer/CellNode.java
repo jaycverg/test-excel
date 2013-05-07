@@ -7,7 +7,7 @@ import org.apache.poi.ss.usermodel.Cell;
  *
  * @author jvergara <jvergara@gocatapult.com>
  */
-class CellNode implements Comparable<CellNode>
+public class CellNode implements Comparable<CellNode>
 {
     public int rowIndex;
     public int colIndex;
