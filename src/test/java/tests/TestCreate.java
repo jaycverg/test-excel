@@ -1,4 +1,4 @@
-package com.catapult.testexcel;
+package tests;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;

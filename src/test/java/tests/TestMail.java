@@ -1,4 +1,4 @@
-package com.catapult.testexcel;
+package tests;
 
 import java.util.Date;
 import java.util.Properties;

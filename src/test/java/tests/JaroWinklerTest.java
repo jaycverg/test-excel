@@ -1,5 +1,6 @@
-package com.catapult.testexcel;
+package tests;
 
+import com.catapult.testexcel.JaroWinkler;
 import org.junit.Test;
 
 /**

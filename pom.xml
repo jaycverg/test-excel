@@ -57,7 +57,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>com.catapult.testexcel.App</mainClass>
+                            <mainClass>com.catapult.excel.analyzer.ui.Main</mainClass>
                         </manifest>
                     </archive>
                 </configuration>

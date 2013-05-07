@@ -1,41 +1,42 @@
-package com.catapult.excel.analyzer.test;
+package com.catapult.excel.analyzer.ui;
 
 import com.catapult.excel.analyzer.ExcelDataHeader;
 import com.catapult.excel.analyzer.ExcelSheetAnalyzer;
 import java.io.InputStream;
 import javax.swing.JDialog;
+import javax.swing.JFrame;
 import javax.swing.UIManager;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.usermodel.WorkbookFactory;
 import org.apache.poi.util.IOUtils;
-import org.junit.Test;
 
 /**
  *
  * @author jvergara <jvergara@gocatapult.com>
  */
-public class ExcelAnalyzerTest
+public class Main
 {
-    @Test
-    public void testWithUI()
+    public static void main(String[] args)
+    {
+        new Main().testWithUI();
+    }
+
+    private void testWithUI()
     {
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
         }
         catch(Exception e){}
-        
-        JDialog d = new JDialog();
-        d.setTitle("Test Excel Sheet Analyzer");
-        d.setContentPane(new TestUI());
+
+        JFrame d = new JFrame("Test Excel Sheet Analyzer");
+        d.setContentPane(new AnalyzerUI());
         d.pack();
-        d.setModal(true);
-        d.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+        d.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         d.setVisible(true);
     }
 
-    //@Test
-    public void test()
+    private void test()
     {
         InputStream is = null;
         try

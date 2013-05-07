@@ -2,7 +2,7 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-package com.catapult.excel.analyzer.test;
+package com.catapult.excel.analyzer.ui;
 
 import com.catapult.excel.analyzer.ExcelDataHeader;
 import com.catapult.excel.analyzer.ExcelSheetAnalyzer;
@@ -21,16 +21,16 @@ import org.apache.poi.util.IOUtils;
  *
  * @author jvergara <jvergara@gocatapult.com>
  */
-public class TestUI extends javax.swing.JPanel
+public class AnalyzerUI extends javax.swing.JPanel
 {
     private JFileChooser fileChooser;
     private Workbook workbook;
     private DefaultListModel listModel;
 
     /**
-     * Creates new form TestUI
+     * Creates new form AnalyzerUI
      */
-    public TestUI()
+    public AnalyzerUI()
     {
         initComponents();
 
