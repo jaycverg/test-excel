@@ -1,4 +1,4 @@
-package com.catapult.testexcel;
+package tests;
 
 /**
  * An implementation of the Jaro-Winkler string similarity measure.

@@ -1,6 +1,5 @@
 package com.catapult.excel.analyzer;
 
-import com.catapult.testexcel.CellUtil;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -55,6 +54,9 @@ public class ExcelSheetAnalyzer
         Collections.sort(headers);
     }
 
+    /**
+     * Indexes all not empty cells
+     */
     private void indexCells(Map<Integer, RowNode> rowMap, List<RowNode> rows)
     {
         Iterator<Row> rowItr = sheet.rowIterator();
@@ -236,7 +238,7 @@ public class ExcelSheetAnalyzer
             bottomNode = computeScoreVertical(firstNode, verticalScore);
 
             if (horizontalScore.getHeaderScorePercentage() > verticalScore.getHeaderScorePercentage()) {
-                createHeadersHorizontal(firstNode, verticalScore);
+                createHeadersHorizontal(firstNode, horizontalScore);
                 markHeaderGroupHorizontalAsProcessed(firstNode);
             }
             // vertical orientation
@@ -253,13 +255,13 @@ public class ExcelSheetAnalyzer
 
     private boolean isValidNode(CellNode firstNode)
     {
-        // a header should have at least one value either going right or down
+        // a header should have at least one value either going rightNode or down
         if (!firstNode.isNextAdjacent() && !firstNode.isBottomAdjacent())
         {
             return false;
         }
 
-        // if the bottom has an adjacent cell to the left,
+        // if the bottomNode has an adjacent cell to the left,
         // this might not be a header
         if (firstNode.bottom != null && firstNode.bottom.isPrevAdjacent())
         {
@@ -296,7 +298,7 @@ public class ExcelSheetAnalyzer
     }
 
     /**
-     * Recursively finds the next data block to right of the passed currentNode
+     * Recursively finds the next data block to rightNode of the passed currentNode
      */
     private void findNextDataBlockHorizontal(CellNode node, List<CellNode> unprocessedList)
     {
@@ -332,7 +334,7 @@ public class ExcelSheetAnalyzer
     }
 
     /**
-     * Finds the next CellNode at the bottom of the passed currentNode
+     * Finds the next CellNode at the bottomNode of the passed currentNode
      */
     private void findNextDataBlockVertical(CellNode node, List<CellNode> unprocessedList)
     {
@@ -360,8 +362,46 @@ public class ExcelSheetAnalyzer
         // try to find subheaders
         if (firstNode.isBottomAdjacent())
         {
+            // determine the max merged row index that where merged down from headers
+            int maxMergedRowIndex = firstNode.rowIndex;
+
+            // iterate rightward
+            currentNode = firstNode;
+            do {
+                if (currentNode.merged) {
+                    // check if bottomNode node is merged with the top
+                    CellNode bottomNode = currentNode.bottom;
+                    while (bottomNode != null && bottomNode.merged && bottomNode.cell == bottomNode.top.cell) {
+                        maxMergedRowIndex = Math.max(maxMergedRowIndex, bottomNode.rowIndex);
+                        bottomNode = bottomNode.bottom;
+                    }
+                }
+            }
+            while (currentNode.isNextAdjacent() && (currentNode = currentNode.next) != null);
+
+            // apply subheaders that are merged with the header
+            if (maxMergedRowIndex > firstNode.rowIndex)
+            {
+                currentNode = firstNode.bottom;
+                while (currentNode.rowIndex <= maxMergedRowIndex)
+                {
+                    // iterate rightward
+                    CellNode rightNode = currentNode;
+                    do {
+                        ExcelDataHeader header = headerMap.get(rightNode.colIndex);
+                        if (header != null) {
+                            header.addSubHeader(rightNode);
+                        }
+                    }
+                    while (rightNode.isNextAdjacent() && (rightNode = rightNode.next) != null);
+
+                    currentNode = currentNode.bottom;
+                }
+            }
+
+            // find more subheaders that might qualify as headers
             CellNodeScore subScore = new CellNodeScore();
-            currentNode = firstNode.bottom;
+            currentNode = currentNode.bottom;
             double initialHeaderAve = initialScore.getHeaderAveScore();
 
             do
@@ -385,7 +425,10 @@ public class ExcelSheetAnalyzer
                 CellNode rightNode = currentNode;
                 do
                 {
-                    headerMap.get(rightNode.colIndex).addSubHeader(rightNode);
+                    ExcelDataHeader header = headerMap.get(rightNode.colIndex);
+                    if (header != null) {
+                        header.addSubHeader(rightNode);
+                    }
                 }
                 while(rightNode.isNextAdjacent() && (rightNode = rightNode.next) != null);
             }
@@ -402,7 +445,7 @@ public class ExcelSheetAnalyzer
         // iterate each lastHeader
         do
         {
-            // determine the bottom most currentNode
+            // determine the bottomNode most currentNode
             CellNode bottomNode = currentNode;
 
             while (bottomNode.isBottomAdjacent())
@@ -472,7 +515,10 @@ public class ExcelSheetAnalyzer
                 CellNode bottomNode = currentNode;
                 do
                 {
-                    headerMap.get(bottomNode.rowIndex).addSubHeader(bottomNode);
+                    ExcelDataHeader header = headerMap.get(bottomNode.rowIndex);
+                    if (header != null) {
+                        header.addSubHeader(bottomNode);
+                    }
                 }
                 while(bottomNode.isNextAdjacent() && (bottomNode = bottomNode.bottom) != null);
             }
@@ -489,7 +535,7 @@ public class ExcelSheetAnalyzer
         // iterate each lastHeader
         do
         {
-            // determine the right most currentNode
+            // determine the rightNode most currentNode
             CellNode rightNode = currentNode;
 
             while (rightNode.isNextAdjacent())
@@ -519,7 +565,7 @@ public class ExcelSheetAnalyzer
     private boolean scoreMatches(double source, double target)
     {
         int offset = getCellAnalyzer().getScoreComparisonOffset();
-        return (target >= source - offset && target <= source + offset);
+        return (target >= source - offset);
     }
 
     private boolean checkHorizontalStyleConsistency(CellNode firstNode)
@@ -555,7 +601,7 @@ public class ExcelSheetAnalyzer
             }
         }
 
-        return true;
+        return isTextBold || hasBackground;
     }
 
     private void markHeaderGroupHorizontalAsProcessed(CellNode firstNode)

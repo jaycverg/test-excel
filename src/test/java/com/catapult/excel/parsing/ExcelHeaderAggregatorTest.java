@@ -25,7 +25,7 @@ public class ExcelHeaderAggregatorTest
 //        String filePath = "C:/Users/jcosare/Downloads/HWL CUSTOMER 2 TEMPLATE - AIR FREIGHT.xls";
 //        File file = new File(filePath);
 
-        InputStream is = getClass().getResourceAsStream("../analyzer/format3.xlsx"); //format-test.xlsx");
+        InputStream is = getClass().getResourceAsStream("format-test.xlsx");
         Workbook workbook = WorkbookFactory.create(is);
         is.close();
 

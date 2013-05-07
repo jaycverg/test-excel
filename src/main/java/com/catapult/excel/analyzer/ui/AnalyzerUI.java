@@ -64,9 +64,9 @@ public class AnalyzerUI extends javax.swing.JPanel
         });
 
         txtFilename.setEditable(false);
-        txtFilename.setFont(new java.awt.Font("Tahoma", 0, 14)); // NOI18N
+        txtFilename.setFont(new java.awt.Font("Arial", 0, 14)); // NOI18N
 
-        lstSheetNames.setFont(new java.awt.Font("Tahoma", 0, 14)); // NOI18N
+        lstSheetNames.setFont(new java.awt.Font("Arial", 0, 14)); // NOI18N
         lstSheetNames.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
         jScrollPane1.setViewportView(lstSheetNames);
 
@@ -87,7 +87,7 @@ public class AnalyzerUI extends javax.swing.JPanel
                 .addContainerGap()
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(txtFilename)
-                    .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 380, Short.MAX_VALUE)
+                    .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 506, Short.MAX_VALUE)
                     .addGroup(layout.createSequentialGroup()
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addComponent(btnBrowse)

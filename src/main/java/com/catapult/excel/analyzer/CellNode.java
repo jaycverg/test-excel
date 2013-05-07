@@ -1,6 +1,5 @@
 package com.catapult.excel.analyzer;
 
-import com.catapult.testexcel.CellUtil;
 import org.apache.poi.ss.usermodel.Cell;
 
 /**

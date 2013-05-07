@@ -26,6 +26,8 @@ public class ExcelDataHeader implements Comparable<ExcelDataHeader>
     private short orientation;
     private List<String> titleList = new ArrayList();
 
+    private CellNode prevCellNode;
+
     public ExcelDataHeader(CellNode cellNode)
     {
         this.startRow = cellNode.rowIndex;
@@ -34,6 +36,7 @@ public class ExcelDataHeader implements Comparable<ExcelDataHeader>
         this.endColumn = this.startColumn;
 
         addTitle(cellNode.cell.toString().trim());
+        prevCellNode = cellNode;
     }
 
     /**
@@ -51,7 +54,10 @@ public class ExcelDataHeader implements Comparable<ExcelDataHeader>
             endColumn = cellNode.colIndex;
         }
 
-        addTitle(cellNode.cell.toString().trim());
+        if (prevCellNode == null || prevCellNode.cell != cellNode.cell) {
+            addTitle(cellNode.cell.toString().trim());
+        }
+        prevCellNode = cellNode;
     }
 
     @Override
@@ -88,7 +94,9 @@ public class ExcelDataHeader implements Comparable<ExcelDataHeader>
 
     private void addTitle(String title)
     {
-        titleList.add(title.replace("\n", " ").replaceAll("\\s{2,}", " "));
+        if (!title.isEmpty()) {
+            titleList.add(title.replace("\n", " ").replaceAll("\\s{2,}", " "));
+        }
     }
     
 
@@ -273,7 +281,7 @@ public class ExcelDataHeader implements Comparable<ExcelDataHeader>
      */
     public String getTitle()
     {
-        return StringUtils.join(titleList, " / ");
+        return StringUtils.join(titleList, " | ");
     }
 
     /**

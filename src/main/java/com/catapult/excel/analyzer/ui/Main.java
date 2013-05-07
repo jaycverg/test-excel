@@ -2,8 +2,9 @@ package com.catapult.excel.analyzer.ui;
 
 import com.catapult.excel.analyzer.ExcelDataHeader;
 import com.catapult.excel.analyzer.ExcelSheetAnalyzer;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.InputStream;
-import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.UIManager;
 import org.apache.poi.ss.usermodel.Sheet;
@@ -19,7 +20,8 @@ public class Main
 {
     public static void main(String[] args)
     {
-        new Main().testWithUI();
+//        new Main().testWithUI();
+        new Main().test();
     }
 
     private void testWithUI()
@@ -41,9 +43,14 @@ public class Main
         InputStream is = null;
         try
         {
-            is = getClass().getResourceAsStream("format2.xlsx");
+            File f = new File("C:\\Users\\jvergara\\Documents\\Tests\\all template\\2013 Global Ocean Package - CommScope R2.xls");
+            is = new FileInputStream(f);
             Workbook wb = WorkbookFactory.create(is);
-            Sheet sheet = wb.getSheetAt(0);
+            Sheet sheet = wb.getSheet("FCL");
+
+//            is = getClass().getResourceAsStream("format2.xlsx");
+//            Workbook wb = WorkbookFactory.create(is);
+//            Sheet sheet = wb.getSheetAt(0);
 
             System.out.println("-------------------------------------");
             System.out.println("Sheet Name: " + sheet.getSheetName());
@@ -51,6 +58,7 @@ public class Main
 
             ExcelSheetAnalyzer esa = new ExcelSheetAnalyzer(sheet);
             esa.analyze();
+            
             for (ExcelDataHeader header : esa.getHeaders())
             {
                 System.out.println(header);
