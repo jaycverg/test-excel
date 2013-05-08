@@ -10,7 +10,7 @@ import java.util.regex.Pattern;
 public class DefaultCellAnalyzer implements CellAnalyzer
 {
     private static final Pattern POSSIBLE_HEADER_TEXT = Pattern.compile("origin|destination|port|carrier|shipper|service|contract");
-    private static final int SCORE_COMPARISON_OFFSET = 3; // +/- 1 offset
+    private static final int SCORE_COMPARISON_OFFSET = 2; // +/- 1 offset
 
     private static final int HEADER_SCORE_BG = 1;
     private static final int HEADER_SCORE_MERGED = 1;
