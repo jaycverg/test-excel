@@ -8,7 +8,10 @@ import com.catapult.excel.analyzer.ExcelDataHeader;
 import com.catapult.excel.analyzer.ExcelSheetAnalyzer;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.io.InputStream;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.swing.DefaultListModel;
 import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
@@ -26,6 +29,7 @@ public class AnalyzerUI extends javax.swing.JPanel
     private JFileChooser fileChooser;
     private Workbook workbook;
     private DefaultListModel listModel;
+    private File selectedFile;
 
     /**
      * Creates new form AnalyzerUI
@@ -37,6 +41,11 @@ public class AnalyzerUI extends javax.swing.JPanel
         fileChooser = new JFileChooser();
         listModel = new DefaultListModel();
         lstSheetNames.setModel(listModel);
+
+        File initial = new File("C:/Users/jvergara/Documents/Tests/header-analyzer");
+        if (initial.exists()) {
+            fileChooser.setCurrentDirectory(initial);
+        }
     }
 
     /**
@@ -53,6 +62,9 @@ public class AnalyzerUI extends javax.swing.JPanel
         jScrollPane1 = new javax.swing.JScrollPane();
         lstSheetNames = new javax.swing.JList();
         btnProcess = new javax.swing.JButton();
+        btnViewFile = new javax.swing.JButton();
+        btnOpenDirectory = new javax.swing.JButton();
+        jSeparator1 = new javax.swing.JSeparator();
 
         btnBrowse.setText("Browse");
         btnBrowse.addActionListener(new java.awt.event.ActionListener()
@@ -79,6 +91,24 @@ public class AnalyzerUI extends javax.swing.JPanel
             }
         });
 
+        btnViewFile.setText("View File");
+        btnViewFile.addActionListener(new java.awt.event.ActionListener()
+        {
+            public void actionPerformed(java.awt.event.ActionEvent evt)
+            {
+                btnViewFileActionPerformed(evt);
+            }
+        });
+
+        btnOpenDirectory.setText("Open Directory");
+        btnOpenDirectory.addActionListener(new java.awt.event.ActionListener()
+        {
+            public void actionPerformed(java.awt.event.ActionEvent evt)
+            {
+                btnOpenDirectoryActionPerformed(evt);
+            }
+        });
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(this);
         this.setLayout(layout);
         layout.setHorizontalGroup(
@@ -90,20 +120,31 @@ public class AnalyzerUI extends javax.swing.JPanel
                     .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 506, Short.MAX_VALUE)
                     .addGroup(layout.createSequentialGroup()
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(btnBrowse)
-                            .addComponent(btnProcess))
+                            .addComponent(btnProcess)
+                            .addGroup(layout.createSequentialGroup()
+                                .addComponent(btnBrowse)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(btnOpenDirectory)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(btnViewFile)))
                         .addGap(0, 0, Short.MAX_VALUE)))
                 .addContainerGap())
+            .addComponent(jSeparator1, javax.swing.GroupLayout.Alignment.TRAILING)
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
                 .addContainerGap()
-                .addComponent(btnBrowse)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(btnBrowse)
+                    .addComponent(btnViewFile)
+                    .addComponent(btnOpenDirectory))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jSeparator1, javax.swing.GroupLayout.PREFERRED_SIZE, 10, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(txtFilename, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 166, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 150, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(btnProcess)
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
@@ -115,15 +156,15 @@ public class AnalyzerUI extends javax.swing.JPanel
         int result = fileChooser.showOpenDialog(this);
         if (result != JFileChooser.APPROVE_OPTION) return;
 
-        File file = fileChooser.getSelectedFile();
+        selectedFile = fileChooser.getSelectedFile();
         txtFilename.setText("");
         listModel.clear();
         InputStream is = null;
         
         try {
-            is = new FileInputStream(file);
+            is = new FileInputStream(selectedFile);
             workbook = WorkbookFactory.create(is);
-            txtFilename.setText(file.getAbsolutePath());
+            txtFilename.setText(selectedFile.getAbsolutePath());
             for (int i=0; i < workbook.getNumberOfSheets(); ++i) {
                 if (workbook.isSheetHidden(i)) continue;
 
@@ -133,6 +174,7 @@ public class AnalyzerUI extends javax.swing.JPanel
         }
         catch(Exception e) {
             //e.printStackTrace();
+            selectedFile = null;
             JOptionPane.showMessageDialog(this, "Invalid file selected", "Error", JOptionPane.ERROR_MESSAGE);
         }
         finally {
@@ -161,10 +203,37 @@ public class AnalyzerUI extends javax.swing.JPanel
         JOptionPane.showMessageDialog(this, "Done!", "Information", JOptionPane.INFORMATION_MESSAGE);
     }//GEN-LAST:event_btnProcessActionPerformed
 
+    private void btnViewFileActionPerformed(java.awt.event.ActionEvent evt)//GEN-FIRST:event_btnViewFileActionPerformed
+    {//GEN-HEADEREND:event_btnViewFileActionPerformed
+        if (selectedFile == null) return;
+
+        try {
+            Runtime.getRuntime().exec("cmd /c \"" + selectedFile.getAbsolutePath() + "\"");
+        }
+        catch (IOException ex) {
+            JOptionPane.showMessageDialog(this, "Failed to open the file.", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }//GEN-LAST:event_btnViewFileActionPerformed
+
+    private void btnOpenDirectoryActionPerformed(java.awt.event.ActionEvent evt)//GEN-FIRST:event_btnOpenDirectoryActionPerformed
+    {//GEN-HEADEREND:event_btnOpenDirectoryActionPerformed
+        if (selectedFile == null) return;
+
+        try {
+            Runtime.getRuntime().exec("explorer \"" + selectedFile.getParentFile().getAbsolutePath() + "\"");
+        }
+        catch (IOException ex) {
+            JOptionPane.showMessageDialog(this, "Failed to open the directory.", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }//GEN-LAST:event_btnOpenDirectoryActionPerformed
+
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton btnBrowse;
+    private javax.swing.JButton btnOpenDirectory;
     private javax.swing.JButton btnProcess;
+    private javax.swing.JButton btnViewFile;
     private javax.swing.JScrollPane jScrollPane1;
+    private javax.swing.JSeparator jSeparator1;
     private javax.swing.JList lstSheetNames;
     private javax.swing.JTextField txtFilename;
     // End of variables declaration//GEN-END:variables

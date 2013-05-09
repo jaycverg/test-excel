@@ -43,22 +43,14 @@ public class Main
         InputStream is = null;
         try
         {
-            File f = new File("C:\\Users\\jvergara\\Documents\\Tests\\all template\\2013 RFP Matrix 02-19-13 with Hazmat.xlsx");
-            is = new FileInputStream(f);
+//            File f = new File("C:\\Users\\jvergara\\Documents\\Tests\\header-analyzer\\2013 RFP Matrix 02-19-13 with Hazmat.xlsx");
+//            is = new FileInputStream(f);
+//            Workbook wb = WorkbookFactory.create(is);
+//            Sheet sheet = wb.getSheet("Expedited");
+
+            is = getClass().getResourceAsStream("test1.xlsx");
             Workbook wb = WorkbookFactory.create(is);
-            Sheet sheet = wb.getSheet("RFP");
-
-//            is = getClass().getResourceAsStream("format2.xlsx");
-//            Workbook wb = WorkbookFactory.create(is);
-//            Sheet sheet = wb.getSheetAt(0);
-
-//            is = getClass().getResourceAsStream("format3.xlsx");
-//            Workbook wb = WorkbookFactory.create(is);
-//            Sheet sheet = wb.getSheetAt(0);
-
-//            is = getClass().getResourceAsStream("test1.xlsx");
-//            Workbook wb = WorkbookFactory.create(is);
-//            Sheet sheet = wb.getSheetAt(0);
+            Sheet sheet = wb.getSheetAt(0);
 
 //            is = getClass().getResourceAsStream("test1.xlsx");
 //            Workbook wb = WorkbookFactory.create(is);

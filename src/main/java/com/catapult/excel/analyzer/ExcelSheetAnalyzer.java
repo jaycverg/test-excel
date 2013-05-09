@@ -21,6 +21,8 @@ public class ExcelSheetAnalyzer
     private Sheet sheet;
     private List<ExcelDataHeader> headers = new ArrayList();
 
+    private int headerGroupCounter;
+
     private CellAnalyzer cellAnalyzer;
 
     public ExcelSheetAnalyzer(Sheet sheet)
@@ -35,6 +37,7 @@ public class ExcelSheetAnalyzer
 
     public void analyze()
     {
+        headerGroupCounter = 1;
         headers.clear();
 
         List<RowNode> rows = new ArrayList();
@@ -206,6 +209,7 @@ public class ExcelSheetAnalyzer
             boolean hStyleConsistent = checkHorizontalStyleConsistency(firstNode);
             boolean vStyleConsistent = checkVerticalStyleConsistency(firstNode);
 
+            // if no consistent styles, this might not be a header
             if (!hStyleConsistent && !vStyleConsistent) {
                 break processNode;
             }
@@ -223,7 +227,20 @@ public class ExcelSheetAnalyzer
             CellNodeScore verticalScore = new CellNodeScore();
             bottomNode = computeScoreVertical(firstNode, verticalScore);
 
-            if (horizontalScore.getHeaderScorePercentage() > verticalScore.getHeaderScorePercentage()) {
+            boolean isHorizontal = horizontalScore.getHeaderScorePercentage() > verticalScore.getHeaderScorePercentage();
+
+            // verify if it is not really horizontal
+            if (!isHorizontal) {
+                if (horizontalScore.complexHeader && !verticalScore.complexHeader) {
+                    isHorizontal = true;
+                }
+                else if (hStyleConsistent && vStyleConsistent && horizontalScore.count > verticalScore.count)
+                {
+                    isHorizontal = true;
+                }
+            }
+
+            if (isHorizontal) {
                 if (createHeadersHorizontal(firstNode, rightNode, horizontalScore)) {
                     markHeaderGroupHorizontalAsProcessed(firstNode);
                 }
@@ -283,31 +300,43 @@ public class ExcelSheetAnalyzer
         if (lastNode.isBottomAdjacent()) 
         {
             int count = 0;
-            
+            CellNode right;
             CellNode bottom = lastNode.bottom;
-            while (bottom.isBottomAdjacent() && !bottom.bottom.isNextAdjacent())
-            {
-                bottom = bottom.bottom;
-            }
+            
+            findMoreHeaders:
+            do {
+                while (bottom.isBottomAdjacent() && !bottom.isNextAdjacent())
+                {
+                    bottom = bottom.bottom;
+                }
 
-            CellNode right = bottom.next;
-            if (right != null) {
+                // break if right node is not adjacent or null
+                if (!bottom.isNextAdjacent()) break;
+                right = bottom.next;
+
                 do {
                     count++;
                 }
                 while (!right.isTopAdjacent() && right.isNextAdjacent() && (right = right.next) != null);
 
-                CellNode top = right.top;
-                if (top != null) {
+                // break if top node is not adjacent or null
+                if (right.isTopAdjacent()) {
+                    CellNode top = right.top;
+
                     do {
                         if (top.rowIndex == lastNode.rowIndex) {
-                            score.count += count;
+                            score.count += count - 1;
                             lastNode = computeScoreHorizontal(top, score);
+                            score.complexHeader = true;
+                            break findMoreHeaders;
                         }
                     }
                     while (top.isTopAdjacent() && (top = top.top) != null);
                 }
+
+                bottom = right;
             }
+            while (true); // end do-while loop
         }
 
         return lastNode;
@@ -381,7 +410,7 @@ public class ExcelSheetAnalyzer
         CellNode rightNode = currentNode;
         do
         {
-            ExcelDataHeader header = new ExcelDataHeader(rightNode);
+            ExcelDataHeader header = new ExcelDataHeader(sheet, rightNode);
             header.setOrientation(ExcelDataHeader.ORIENTATION_HORIZONTAL);
             headerMap.put(rightNode.colIndex, header);
         }
@@ -421,7 +450,7 @@ public class ExcelSheetAnalyzer
                             header.addSubHeader(rightNode);
                         }
                         else {
-                            header = new ExcelDataHeader(rightNode);
+                            header = new ExcelDataHeader(sheet, rightNode);
                             header.setOrientation(ExcelDataHeader.ORIENTATION_HORIZONTAL);
                             headerMap.put(rightNode.colIndex, header);
                         }
@@ -471,7 +500,7 @@ public class ExcelSheetAnalyzer
                             header.addSubHeader(rightNode);
                         }
                         else {
-                            header = new ExcelDataHeader(rightNode);
+                            header = new ExcelDataHeader(sheet, rightNode);
                             header.setOrientation(ExcelDataHeader.ORIENTATION_HORIZONTAL);
                             headerMap.put(rightNode.colIndex, header);
                         }
@@ -511,11 +540,15 @@ public class ExcelSheetAnalyzer
             header.setDataEndRow(dataEndRow);
             header.setDataStartColumn(header.getStartColumn());
             header.setDataEndColumn(header.getStartColumn());
+            header.setGroup(headerGroupCounter);
         }
 
         if (!headerMap.isEmpty()) {
             headers.addAll(headerMap.values());
             headerMap.clear();
+
+            // increment counter if there are headers
+            headerGroupCounter++;
         }
 
         return true;
@@ -529,7 +562,7 @@ public class ExcelSheetAnalyzer
 
         // iterate downward
         do {
-            ExcelDataHeader header = new ExcelDataHeader(currentNode);
+            ExcelDataHeader header = new ExcelDataHeader(sheet, currentNode);
             header.setOrientation(ExcelDataHeader.ORIENTATION_VERTICAL);
             headerMap.put(currentNode.rowIndex, header);
         }
@@ -598,11 +631,15 @@ public class ExcelSheetAnalyzer
             header.setDataEndColumn(dataEndCol);
             header.setDataStartRow(header.getStartRow());
             header.setDataEndRow(header.getEndRow());
+            header.setGroup(headerGroupCounter);
         }
 
         if (!headerMap.isEmpty()) {
             headers.addAll(headerMap.values());
             headerMap.clear();
+
+            // increment counter if there are headers
+            headerGroupCounter++;
         }
 
         return true;
@@ -616,36 +653,34 @@ public class ExcelSheetAnalyzer
 
     private boolean checkHorizontalStyleConsistency(CellNode firstNode)
     {
+        boolean isTextBoldConsistent = true;
+        boolean isBackgroundConsistent = true;
+        
         boolean isTextBold = CellUtil.isTextBold(firstNode.cell);
         boolean hasBackground = CellUtil.hasBackground(firstNode.cell);
 
         while (firstNode.isNextAdjacent() && (firstNode = firstNode.next) != null) {
-            if (isTextBold != CellUtil.isTextBold(firstNode.cell)) {
-                return false;
-            }
-            if (hasBackground != CellUtil.hasBackground(firstNode.cell)) {
-                return false;
-            }
+            isTextBoldConsistent  = (isTextBold == CellUtil.isTextBold(firstNode.cell));
+            isBackgroundConsistent = (hasBackground == CellUtil.hasBackground(firstNode.cell));
         }
 
-        return true;
+        return isTextBoldConsistent || isBackgroundConsistent;
     }
 
     private boolean checkVerticalStyleConsistency(CellNode firstNode)
     {
+        boolean isTextBoldConsistent = true;
+        boolean isBackgroundConsistent = true;
+
         boolean isTextBold = CellUtil.isTextBold(firstNode.cell);
         boolean hasBackground = CellUtil.hasBackground(firstNode.cell);
 
         while (firstNode.isBottomAdjacent() && (firstNode = firstNode.bottom) != null) {
-            if (isTextBold != CellUtil.isTextBold(firstNode.cell)) {
-                return false;
-            }
-            if (hasBackground != CellUtil.hasBackground(firstNode.cell)) {
-                return false;
-            }
+            isTextBoldConsistent  = (isTextBold == CellUtil.isTextBold(firstNode.cell));
+            isBackgroundConsistent = (hasBackground == CellUtil.hasBackground(firstNode.cell));
         }
 
-        return isTextBold || hasBackground;
+        return isTextBoldConsistent || isBackgroundConsistent;
     }
 
     private void markHeaderGroupHorizontalAsProcessed(CellNode firstNode)
@@ -701,6 +736,7 @@ public class ExcelSheetAnalyzer
         int count;
         int headerScore;
         int dataScore;
+        boolean complexHeader;
 
         public void reset()
         {

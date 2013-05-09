@@ -3,6 +3,7 @@ package com.catapult.excel.analyzer;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.poi.ss.usermodel.Sheet;
 
 /**
  *
@@ -15,6 +16,7 @@ public class ExcelDataHeader implements Comparable<ExcelDataHeader>
 
     private String sheetName;
     private int sheetIndex;
+    private int group;
     private int startRow;
     private int startColumn;
     private int endRow;
@@ -28,8 +30,10 @@ public class ExcelDataHeader implements Comparable<ExcelDataHeader>
 
     private CellNode prevCellNode;
 
-    public ExcelDataHeader(CellNode cellNode)
+    public ExcelDataHeader(Sheet sheet, CellNode cellNode)
     {
+        this.sheetName = sheet.getSheetName();
+        this.sheetIndex = sheet.getWorkbook().getSheetIndex(sheetName);
         this.startRow = cellNode.rowIndex;
         this.startColumn = cellNode.colIndex;
         this.endRow = this.startRow;
@@ -85,11 +89,16 @@ public class ExcelDataHeader implements Comparable<ExcelDataHeader>
             return -1;
         }
 
-        if (this.startRow != o.startRow) {
-            return this.startRow - o.startRow;
+        if (this.group != o.group) {
+            return this.group - o.group;
         }
 
-        return this.startColumn - o.startColumn;
+        if (ORIENTATION_HORIZONTAL == this.orientation) {
+            return this.startColumn - o.startColumn;
+        }
+        else {
+            return this.startRow - o.startRow;
+        }
     }
 
     private void addTitle(String title)
@@ -130,6 +139,22 @@ public class ExcelDataHeader implements Comparable<ExcelDataHeader>
     public void setSheetIndex(int sheetIndex)
     {
         this.sheetIndex = sheetIndex;
+    }
+
+    /**
+     * @return the group
+     */
+    public int getGroup()
+    {
+        return group;
+    }
+
+    /**
+     * @param group the group to set
+     */
+    public void setGroup(int group)
+    {
+        this.group = group;
     }
 
     /**
