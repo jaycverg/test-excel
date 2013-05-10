@@ -20,8 +20,8 @@ public class Main
 {
     public static void main(String[] args)
     {
-//        new Main().testWithUI();
-        new Main().test();
+        new Main().testWithUI();
+//        new Main().test();
     }
 
     private void testWithUI()

@@ -43,10 +43,7 @@ public class ExcelDataHeader implements Comparable<ExcelDataHeader>
         prevCellNode = cellNode;
     }
 
-    /**
-     * Package level method that is only used during processing
-     */
-    void addSubHeader(CellNode cellNode)
+    public void addSubHeader(CellNode cellNode)
     {
         // if orientation is horizontal,
         // adding a subheader is going down
@@ -68,15 +65,15 @@ public class ExcelDataHeader implements Comparable<ExcelDataHeader>
     public String toString()
     {
         return new StringBuilder()
-                .append("start: [").append(startRow)
+                .append("location: [").append(startRow)
                 .append(",").append(startColumn).append("]")
-                .append(",end: [").append(endRow)
+                .append(" - [").append(endRow)
                 .append(",").append(endColumn).append("]")
                 .append(",orientation: ")
                 .append(orientation==ORIENTATION_HORIZONTAL ? "H" : "V")
-                .append(",data start: [").append(dataStartRow)
+                .append(",data : [").append(dataStartRow)
                 .append(",").append(dataStartColumn).append("]")
-                .append(",data end : ").append(dataEndRow)
+                .append(" - [").append(dataEndRow)
                 .append(",").append(dataEndColumn).append("]")
                 .append(",title: ").append(getTitle())
                 .toString();
