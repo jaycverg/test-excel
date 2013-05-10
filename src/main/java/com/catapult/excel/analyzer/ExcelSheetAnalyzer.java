@@ -300,7 +300,6 @@ public class ExcelSheetAnalyzer
         if (lastNode.isBottomAdjacent()) 
         {
             int count = 0;
-            int bottomRowIndex = score.complexHeaderLastIndex;
             CellNode right;
             CellNode bottom = lastNode.bottom;
             
@@ -313,9 +312,7 @@ public class ExcelSheetAnalyzer
 
                 // break if right node is not adjacent or null
                 if (!bottom.isNextAdjacent()) break;
-
                 right = bottom.next;
-                bottomRowIndex = Math.max(bottomRowIndex, bottom.rowIndex);
 
                 do {
                     count++;
@@ -330,7 +327,6 @@ public class ExcelSheetAnalyzer
                             score.count += count - 1;
                             lastNode = computeScoreHorizontal(top, score);
                             score.complexHeader = true;
-                            score.complexHeaderLastIndex = bottomRowIndex;
                             break findMoreHeaders;
                         }
                     }
@@ -423,7 +419,7 @@ public class ExcelSheetAnalyzer
         if (currentNode.isBottomAdjacent())
         {
             // determine the max merged row index that where merged down from headers
-            int maxMergedRowIndex = Math.max(currentNode.rowIndex, initialScore.complexHeaderLastIndex);
+            int maxMergedRowIndex = currentNode.rowIndex;
 
             // iterate rightward
             rightNode = currentNode;
@@ -751,7 +747,6 @@ public class ExcelSheetAnalyzer
         int count;
         int headerScore;
         int dataScore;
-        int complexHeaderLastIndex;
         boolean complexHeader;
 
         public void reset()
