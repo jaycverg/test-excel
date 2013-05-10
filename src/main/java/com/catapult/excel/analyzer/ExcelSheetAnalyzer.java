@@ -300,6 +300,7 @@ public class ExcelSheetAnalyzer
         if (lastNode.isBottomAdjacent()) 
         {
             int count = 0;
+            int bottomRowIndex = score.complexHeaderLastIndex;
             CellNode right;
             CellNode bottom = lastNode.bottom;
             
@@ -312,14 +313,15 @@ public class ExcelSheetAnalyzer
 
                 // break if right node is not adjacent or null
                 if (!bottom.isNextAdjacent()) break;
+
                 right = bottom.next;
+                bottomRowIndex = Math.max(bottomRowIndex, bottom.rowIndex);
 
                 do {
                     count++;
                 }
                 while (!right.isTopAdjacent() && right.isNextAdjacent() && (right = right.next) != null);
 
-                // break if top node is not adjacent or null
                 if (right.isTopAdjacent()) {
                     CellNode top = right.top;
 
@@ -328,6 +330,7 @@ public class ExcelSheetAnalyzer
                             score.count += count - 1;
                             lastNode = computeScoreHorizontal(top, score);
                             score.complexHeader = true;
+                            score.complexHeaderLastIndex = bottomRowIndex;
                             break findMoreHeaders;
                         }
                     }
@@ -420,7 +423,7 @@ public class ExcelSheetAnalyzer
         if (currentNode.isBottomAdjacent())
         {
             // determine the max merged row index that where merged down from headers
-            int maxMergedRowIndex = currentNode.rowIndex;
+            int maxMergedRowIndex = Math.max(currentNode.rowIndex, initialScore.complexHeaderLastIndex);
 
             // iterate rightward
             rightNode = currentNode;
@@ -434,7 +437,7 @@ public class ExcelSheetAnalyzer
                     }
                 }
             }
-            while (rightNode.isNextAdjacent() && (rightNode = rightNode.next) != null);
+            while (rightNode.colIndex < lastNode.colIndex && (rightNode = rightNode.next) != null);
 
             // apply subheaders that are merged with the header
             if (maxMergedRowIndex > currentNode.rowIndex)
@@ -455,7 +458,7 @@ public class ExcelSheetAnalyzer
                             headerMap.put(rightNode.colIndex, header);
                         }
                     }
-                    while (rightNode.isNextAdjacent() && (rightNode = rightNode.next) != null);
+                    while (rightNode.colIndex < lastNode.colIndex && (rightNode = rightNode.next) != null);
 
                     bottomNode = bottomNode.bottom;
                 }
@@ -505,17 +508,19 @@ public class ExcelSheetAnalyzer
                             headerMap.put(rightNode.colIndex, header);
                         }
                     }
-                    while(rightNode.isNextAdjacent() && (rightNode = rightNode.next) != null);
+                    while(rightNode.colIndex < lastNode.colIndex && (rightNode = rightNode.next) != null);
 
-                    // continue while-loop
+                    // continue while loop
                     continue;
-                }
+
+                }  // end labeled block
 
                 // reset current node to its parent node
                 currentNode = currentNode.top;
                 break;
-            } // end labeled block
-        } // end while-loop
+                
+            } // end while loop
+        } // end if
 
         // find the firstChild and lastChild rows for the data of each header
         int dataStartRow = currentNode.rowIndex+1;
@@ -533,7 +538,7 @@ public class ExcelSheetAnalyzer
 
             dataEndRow = Math.max(dataEndRow, bottomNode.rowIndex);
         }
-        while (rightNode.isNextAdjacent() && (rightNode = rightNode.next) != null);
+        while (rightNode.colIndex < lastNode.colIndex && (rightNode = rightNode.next) != null);
 
         for (ExcelDataHeader header : headerMap.values()) {
             header.setDataStartRow(dataStartRow);
@@ -561,52 +566,61 @@ public class ExcelSheetAnalyzer
         CellNode currentNode = firstNode;
 
         // iterate downward
+        CellNode bottomNode = currentNode;
         do {
-            ExcelDataHeader header = new ExcelDataHeader(sheet, currentNode);
+            ExcelDataHeader header = new ExcelDataHeader(sheet, bottomNode);
             header.setOrientation(ExcelDataHeader.ORIENTATION_VERTICAL);
-            headerMap.put(currentNode.rowIndex, header);
+            headerMap.put(bottomNode.rowIndex, header);
         }
-        while (currentNode.isBottomAdjacent() && (currentNode = currentNode.bottom) != null);
+        while (bottomNode.rowIndex < lastNode.rowIndex && (bottomNode = bottomNode.bottom) != null);
 
         // try to find subheaders
-        if (firstNode.isNextAdjacent())
+        if (currentNode.isNextAdjacent())
         {
             CellNodeScore subScore = new CellNodeScore();
-            currentNode = firstNode.next;
             double initialHeaderAve = initialScore.getHeaderAveScore();
 
-            do
+            while (currentNode.isNextAdjacent() && (currentNode = currentNode.next) != null)
             {
-                subScore.reset();
-                computeScoreVertical(currentNode, subScore);
-                // if cells are not equal to the initial cells,
-                // then its not a subheader
-                if (subScore.count != initialScore.count)
+                checkRightNode:
                 {
-                    break;
-                }
-
-                // if header average score does not match
-                if (!scoreMatches(initialHeaderAve, subScore.getHeaderAveScore()))
-                {
-                    break;
-                }
-
-                // add subheaders
-                CellNode bottomNode = currentNode;
-                do
-                {
-                    ExcelDataHeader header = headerMap.get(bottomNode.rowIndex);
-                    if (header != null) {
-                        header.addSubHeader(bottomNode);
+                    subScore.reset();
+                    computeScoreVertical(currentNode, subScore);
+                    // if cells are not equal to the initial cells,
+                    // then its not a subheader
+                    if (subScore.count != initialScore.count)
+                    {
+                        break checkRightNode;
                     }
-                }
-                while(bottomNode.isNextAdjacent() && (bottomNode = bottomNode.bottom) != null);
-            }
-            while (currentNode.isNextAdjacent() && (currentNode = currentNode.next) != null);
 
-            // reset current node to its parent node
-            currentNode = currentNode.prev;
+                    // if header average score does not match
+                    if (!scoreMatches(initialHeaderAve, subScore.getHeaderAveScore()))
+                    {
+                        break checkRightNode;
+                    }
+
+                    // add subheaders
+                    bottomNode = currentNode;
+                    do
+                    {
+                        ExcelDataHeader header = headerMap.get(bottomNode.rowIndex);
+                        if (header != null) {
+                            header.addSubHeader(bottomNode);
+                        }
+                    }
+                    while(bottomNode.rowIndex < lastNode.rowIndex && (bottomNode = bottomNode.bottom) != null);
+
+                    // continue while loop
+                    continue;
+
+                } // end labeled block
+
+                // reset current node to its parent node
+                currentNode = currentNode.prev;
+                break;
+                
+            } // end while loop
+
         } // end if
 
         // find the firstChild and lastChild rows for the data of each header
@@ -614,9 +628,10 @@ public class ExcelSheetAnalyzer
         int dataEndCol = dataStartCol;
 
         // iterate each lastHeader
+        bottomNode = currentNode;
         do {
             // determine the rightNode most currentNode
-            CellNode rightNode = currentNode;
+            CellNode rightNode = bottomNode;
 
             while (rightNode.isNextAdjacent()) {
                 rightNode = rightNode.next;
@@ -624,7 +639,7 @@ public class ExcelSheetAnalyzer
 
             dataEndCol = Math.max(dataEndCol, rightNode.colIndex);
         }
-        while (currentNode.isBottomAdjacent() && (currentNode = currentNode.bottom) != null);
+        while (bottomNode.rowIndex < lastNode.rowIndex && (bottomNode = bottomNode.bottom) != null);
 
         for (ExcelDataHeader header : headerMap.values()) {
             header.setDataStartColumn(dataStartCol);
@@ -736,6 +751,7 @@ public class ExcelSheetAnalyzer
         int count;
         int headerScore;
         int dataScore;
+        int complexHeaderLastIndex;
         boolean complexHeader;
 
         public void reset()

@@ -48,13 +48,13 @@ public class Main
 //            Workbook wb = WorkbookFactory.create(is);
 //            Sheet sheet = wb.getSheet("Expedited");
 
-            is = getClass().getResourceAsStream("test1.xlsx");
-            Workbook wb = WorkbookFactory.create(is);
-            Sheet sheet = wb.getSheetAt(0);
-
 //            is = getClass().getResourceAsStream("test1.xlsx");
 //            Workbook wb = WorkbookFactory.create(is);
-//            Sheet sheet = wb.getSheetAt(1);
+//            Sheet sheet = wb.getSheetAt(0);
+
+            is = getClass().getResourceAsStream("test1.xlsx");
+            Workbook wb = WorkbookFactory.create(is);
+            Sheet sheet = wb.getSheetAt(1);
 
             System.out.println("-------------------------------------");
             System.out.println("Sheet Name: " + sheet.getSheetName());
