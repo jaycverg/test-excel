@@ -476,6 +476,7 @@ public class ExcelSheetAnalyzer
 
                     // if cells are greater than the initial cells,
                     // the initial cells were just header comments
+                    // so just return false to find another set of headers
                     if (subScore.count > initialScore.count) {
                         return false;
                     }
