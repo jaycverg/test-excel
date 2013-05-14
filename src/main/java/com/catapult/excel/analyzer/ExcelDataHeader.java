@@ -11,9 +11,6 @@ import org.apache.poi.ss.usermodel.Sheet;
  */
 public class ExcelDataHeader implements Comparable<ExcelDataHeader>
 {
-    public static final short ORIENTATION_VERTICAL = 1;
-    public static final short ORIENTATION_HORIZONTAL = 2;
-
     private String sheetName;
     private int sheetIndex;
     private int group;
@@ -28,7 +25,7 @@ public class ExcelDataHeader implements Comparable<ExcelDataHeader>
     private short orientation;
     private List<String> titleList = new ArrayList();
 
-    private CellNode prevCellNode;
+    private transient CellNode prevCellNode;
 
     public ExcelDataHeader(Sheet sheet, CellNode cellNode)
     {
@@ -43,11 +40,11 @@ public class ExcelDataHeader implements Comparable<ExcelDataHeader>
         prevCellNode = cellNode;
     }
 
-    public void addSubHeader(CellNode cellNode)
+    void addSubHeader(CellNode cellNode)
     {
         // if orientation is horizontal,
         // adding a subheader is going down
-        if (ORIENTATION_HORIZONTAL == orientation) {
+        if (ExcelDataConstants.ORIENTATION_HORIZONTAL == orientation) {
             endRow = cellNode.rowIndex;
         }
         // adding a subheader is going to the right
@@ -70,7 +67,7 @@ public class ExcelDataHeader implements Comparable<ExcelDataHeader>
                 .append(" - [").append(endRow)
                 .append(",").append(endColumn).append("]")
                 .append(",orientation: ")
-                .append(orientation==ORIENTATION_HORIZONTAL ? "H" : "V")
+                .append(orientation==ExcelDataConstants.ORIENTATION_HORIZONTAL ? "H" : "V")
                 .append(",data : [").append(dataStartRow)
                 .append(",").append(dataStartColumn).append("]")
                 .append(" - [").append(dataEndRow)
@@ -90,7 +87,7 @@ public class ExcelDataHeader implements Comparable<ExcelDataHeader>
             return this.group - o.group;
         }
 
-        if (ORIENTATION_HORIZONTAL == this.orientation) {
+        if (ExcelDataConstants.ORIENTATION_HORIZONTAL == this.orientation) {
             return this.startColumn - o.startColumn;
         }
         else {

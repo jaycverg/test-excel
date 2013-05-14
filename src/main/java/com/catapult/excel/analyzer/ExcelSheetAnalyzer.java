@@ -20,6 +20,7 @@ public class ExcelSheetAnalyzer
 {
     private Sheet sheet;
     private List<ExcelDataHeader> headers = new ArrayList();
+    private List<ExcelDataCluster> clusters = new ArrayList();
 
     private int headerGroupCounter;
 
@@ -28,11 +29,6 @@ public class ExcelSheetAnalyzer
     public ExcelSheetAnalyzer(Sheet sheet)
     {
         this.sheet = sheet;
-    }
-
-    public List<ExcelDataHeader> getHeaders()
-    {
-        return headers;
     }
 
     public void analyze()
@@ -400,6 +396,7 @@ public class ExcelSheetAnalyzer
     {
         // create the headers
         Map<Integer, ExcelDataHeader> headerMap = new LinkedHashMap();
+        List<String> comments = new ArrayList();
 
         // keep the currentNode
         // this value will change as we navigate the nodes
@@ -410,7 +407,7 @@ public class ExcelSheetAnalyzer
         do
         {
             ExcelDataHeader header = new ExcelDataHeader(sheet, rightNode);
-            header.setOrientation(ExcelDataHeader.ORIENTATION_HORIZONTAL);
+            header.setOrientation(ExcelDataConstants.ORIENTATION_HORIZONTAL);
             headerMap.put(rightNode.colIndex, header);
         }
         while(rightNode.colIndex < lastNode.colIndex && (rightNode = rightNode.next) != null);
@@ -450,7 +447,7 @@ public class ExcelSheetAnalyzer
                         }
                         else {
                             header = new ExcelDataHeader(sheet, rightNode);
-                            header.setOrientation(ExcelDataHeader.ORIENTATION_HORIZONTAL);
+                            header.setOrientation(ExcelDataConstants.ORIENTATION_HORIZONTAL);
                             headerMap.put(rightNode.colIndex, header);
                         }
                     }
@@ -501,7 +498,7 @@ public class ExcelSheetAnalyzer
                         }
                         else {
                             header = new ExcelDataHeader(sheet, rightNode);
-                            header.setOrientation(ExcelDataHeader.ORIENTATION_HORIZONTAL);
+                            header.setOrientation(ExcelDataConstants.ORIENTATION_HORIZONTAL);
                             headerMap.put(rightNode.colIndex, header);
                         }
                     }
@@ -545,13 +542,7 @@ public class ExcelSheetAnalyzer
             header.setGroup(headerGroupCounter);
         }
 
-        if (!headerMap.isEmpty()) {
-            headers.addAll(headerMap.values());
-            headerMap.clear();
-
-            // increment counter if there are headers
-            headerGroupCounter++;
-        }
+        addHeaders(headerMap, null);
 
         return true;
     }
@@ -566,7 +557,7 @@ public class ExcelSheetAnalyzer
         CellNode bottomNode = currentNode;
         do {
             ExcelDataHeader header = new ExcelDataHeader(sheet, bottomNode);
-            header.setOrientation(ExcelDataHeader.ORIENTATION_VERTICAL);
+            header.setOrientation(ExcelDataConstants.ORIENTATION_VERTICAL);
             headerMap.put(bottomNode.rowIndex, header);
         }
         while (bottomNode.rowIndex < lastNode.rowIndex && (bottomNode = bottomNode.bottom) != null);
@@ -646,15 +637,28 @@ public class ExcelSheetAnalyzer
             header.setGroup(headerGroupCounter);
         }
 
+        addHeaders(headerMap, null);
+
+        return true;
+    }
+
+    private void addHeaders(Map headerMap, List<String> comments)
+    {
         if (!headerMap.isEmpty()) {
-            headers.addAll(headerMap.values());
+            List values = new ArrayList(headerMap.values());
+            headers.addAll(values);
             headerMap.clear();
+
+            // create cluster
+            ExcelDataCluster cluster = new ExcelDataCluster(values);
+            clusters.add(cluster);
+            if (comments != null) {
+                cluster.getComments().addAll(comments);
+            }
 
             // increment counter if there are headers
             headerGroupCounter++;
         }
-
-        return true;
     }
 
     private boolean scoreMatches(double source, double target)
@@ -721,6 +725,23 @@ public class ExcelSheetAnalyzer
             }
         }
         while (firstNode.isBottomAdjacent() && (firstNode = firstNode.bottom) != null);
+    }
+
+    /**
+     * @return the clusters
+     */
+    public List<ExcelDataHeader> getHeaders()
+    {
+        return headers;
+    }
+
+
+    /**
+     * @return the clusters
+     */
+    public List<ExcelDataCluster> getClusters()
+    {
+        return clusters;
     }
 
     /**

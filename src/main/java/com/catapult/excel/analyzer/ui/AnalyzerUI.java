@@ -4,6 +4,7 @@
  */
 package com.catapult.excel.analyzer.ui;
 
+import com.catapult.excel.analyzer.ExcelDataCluster;
 import com.catapult.excel.analyzer.ExcelDataHeader;
 import com.catapult.excel.analyzer.ExcelSheetAnalyzer;
 import java.io.File;
@@ -196,8 +197,12 @@ public class AnalyzerUI extends javax.swing.JPanel
         ExcelSheetAnalyzer analyzer = new ExcelSheetAnalyzer(sheet);
         analyzer.analyze();
 
-        for (ExcelDataHeader header : analyzer.getHeaders()) {
-            System.out.println(header);
+        for (ExcelDataCluster cluster : analyzer.getClusters()) {
+            System.out.println(cluster);
+            System.out.println("----------------");
+            for (ExcelDataHeader header : cluster.getHeaders()) {
+                System.out.println(header);
+            }
         }
 
         JOptionPane.showMessageDialog(this, "Done!", "Information", JOptionPane.INFORMATION_MESSAGE);
