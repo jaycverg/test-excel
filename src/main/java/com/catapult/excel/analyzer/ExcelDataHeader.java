@@ -25,7 +25,7 @@ public class ExcelDataHeader implements Comparable<ExcelDataHeader>
     private short orientation;
     private List<String> titleList = new ArrayList();
 
-    private transient CellNode prevCellNode;
+    private CellNode prevCellNode;
 
     public ExcelDataHeader(Sheet sheet, CellNode cellNode)
     {
