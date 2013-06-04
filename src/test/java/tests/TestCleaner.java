@@ -6,16 +6,16 @@ import java.io.FileOutputStream;
 import java.io.OutputStream;
 import org.apache.commons.io.IOUtils;
 import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.ss.usermodel.Sheet;
-import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.usermodel.WorkbookFactory;
+import org.apache.poi.xssf.usermodel.XSSFSheet;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.junit.Test;
 
 /**
  *
  * @author jvergara <jvergara@gocatapult.com>
  */
-public class TestCleaner2
+public class TestCleaner
 {
 
     @Test
@@ -23,15 +23,13 @@ public class TestCleaner2
     {
         String srcDirectory = "C:\\Users\\jvergara\\Documents\\Tests\\template-for-cleanup\\";
         String srcFilename = "Unaterra Shipping Lanes RFP data 02.08.13.xlsx";
-//        String srcFilename = "HWL CUSTOMER 2 TEMPLATE - AIR FREIGHT.xls";
         File file = new File(srcDirectory + srcFilename);
         
         String destFilename = "d:\\test." + srcFilename.substring(srcFilename.lastIndexOf('.') + 1);
 
-        Workbook workbook = WorkbookFactory.create(new FileInputStream(file));
+        XSSFWorkbook workbook = (XSSFWorkbook) WorkbookFactory.create(new FileInputStream(file));
 
-        Sheet sheet = workbook.getSheet("RFP Worksheet");
-//        Sheet sheet = workbook.getSheet("Response");
+        XSSFSheet sheet = workbook.getSheet("RFP Worksheet");
         for (int i=5; i<sheet.getLastRowNum(); ++i) {
             Row row = sheet.getRow(i);
             if (row != null) {
@@ -39,9 +37,8 @@ public class TestCleaner2
             }
         }
 
-        sheet.shiftRows(6, sheet.getLastRowNum(), -1);
-        
-
+        sheet.shiftRows(5, sheet.getLastRowNum(), -1);
+       
         OutputStream out = null;
         try {
             File destFile = new File(destFilename);
